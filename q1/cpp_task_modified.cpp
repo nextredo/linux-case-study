@@ -12,15 +12,15 @@ namespace
 
 void StartThread(
     std::thread& thread,
-    std::atomic<bool>& running,
-    const std::function<bool(void)> process,
+    std::atomic<bool>* running,
+    const std::function<bool(void)>& process,
     const std::chrono::seconds timeout)
 {
     thread = std::thread(
-        [&]()
+        [=]()
         {
             auto start = std::chrono::high_resolution_clock::now();
-            while(running)
+            while (*running)
             {
                 bool aborted = process();
 
@@ -28,7 +28,7 @@ void StartThread(
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                 if (aborted || duration > timeout)
                 {
-                    running = false;
+                    *running = false;
                     break;
                 }
             }
@@ -50,7 +50,7 @@ int main()
 
     StartThread(
         my_thread1,
-        my_running1,
+        &my_running1,
         [&]()
         {
             // "some actions" simulated with waiting
@@ -62,7 +62,7 @@ int main()
 
     StartThread(
         my_thread2,
-        my_running2,
+        &my_running2,
         [&]()
         {
             // "some actions" simulated with waiting
