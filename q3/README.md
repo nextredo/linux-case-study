@@ -15,4 +15,19 @@
   - Green - get the test to pass with the bare minimum amount of code
   - Refactor - clean the code up, ensuring it still passes
 
+### Building
+- Done through CMake
+
+```bash
+# Make build dir, cd into it
+mkdir build && cd build
+
+# Create the build system, then compile with it
+cmake .. && make
+
+# Run registered unit tests
+# alternatively, run `./build/test/udp_class_tests`
+ctest
+```
+
 [kb-tdd]: https://www.amazon.com.au/Test-Driven-Development-Kent-Beck/dp/0321146530
