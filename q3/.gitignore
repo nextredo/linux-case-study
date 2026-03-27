@@ -1,1 +1,5 @@
+# Out-of-tree builds
 build/*
+
+# clang-tidy cache
+.cache/*

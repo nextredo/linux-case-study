@@ -15,7 +15,11 @@
   - Green - get the test to pass with the bare minimum amount of code
   - Refactor - clean the code up, ensuring it still passes
 
-### Building
+## Assumptions
+- IPv4, not IPv6
+-
+
+## Building
 - Done through CMake
 
 ```bash
