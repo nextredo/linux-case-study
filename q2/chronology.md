@@ -13,8 +13,9 @@
 ## Running
 - Added extra test case for odd no of elements
 - Current algorithm is duplicating elements, skipping others
-- Need a temporary storage matrix
+- Need a temporary storage matrix or a more intelligent in-place approach
 
 ## Debugging
 - Math appears to check out
 - If taking this approach, you need to copy the list by value, not reference
+- Also, need to return correctly
