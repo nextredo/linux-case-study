@@ -1,25 +1,28 @@
 #include <chrono>
 #include <atomic>
-#include <memory>
 #include <thread>
 #include <functional>
 #include <iostream>
 
 using namespace std::chrono_literals;
 
+// Translation unit local
+namespace
+{
+
 void StartThread(
     std::thread& thread,
     std::atomic<bool>& running,
-    const std::function<bool(void)>& Process,
+    const std::function<bool(void)> process,
     const std::chrono::seconds timeout)
 {
     thread = std::thread(
-        [&] ()
+        [&]()
         {
             auto start = std::chrono::high_resolution_clock::now();
             while(running)
             {
-                bool aborted = Process();
+                bool aborted = process();
 
                 auto end = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -32,17 +35,22 @@ void StartThread(
         });
 }
 
-int main(int argc, char **argv)
+}
+
+int main()
 {
-    std::atomic<bool> my_running = true;
-    std::thread my_thread1, my_thread2;
-    int loop_counter1 = 0, loop_counter2 = 0;
+    std::atomic<bool> my_running1 = true;
+    std::atomic<bool> my_running2 = true;
+    std::thread my_thread1;
+    std::thread my_thread2;
+    int loop_counter1 = 0;
+    int loop_counter2 = 0;
 
     // start actions in seprate threads and wait of them
 
     StartThread(
         my_thread1,
-        my_running,
+        my_running1,
         [&]()
         {
             // "some actions" simulated with waiting
@@ -54,7 +62,7 @@ int main(int argc, char **argv)
 
     StartThread(
         my_thread2,
-        my_running,
+        my_running2,
         [&]()
         {
             // "some actions" simulated with waiting
