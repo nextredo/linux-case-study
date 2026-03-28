@@ -40,9 +40,13 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     int socket_fd       = 0;
     int gai_ret         = 0;
     int bind_ret        = 0;
+    int sockopt_ret     = 0;
     int listen_ret      = 0;
     ssize_t bytes_recvd = -1;
 
+    timeval sock_timeout = { .tv_sec = 2 };
+
+    // TODO
     // int yes=1;
     // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
@@ -64,6 +68,11 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     errno = 0;
     bind_ret = bind(socket_fd, result->ai_addr, result->ai_addrlen);
     if (bind_ret == -1)
+        goto cleanup;
+
+    errno = 0;
+    sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
+    if (sockopt_ret == -1)
         goto cleanup;
 
     errno = 0;

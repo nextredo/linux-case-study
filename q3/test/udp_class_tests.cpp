@@ -3,7 +3,8 @@
 #include "udp_class.hpp"
 
 #include <thread>
-#include <atomic>
+#include <algorithm>
+#include <iterator>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -48,8 +49,8 @@ TEST_SUITE("UDP")
 
     TEST_CASE("loopback")
     {
-        const char* const port = "55555";
-        std::string msg        = "hello world!!!!";
+        constexpr char port[] = "55555";
+        constexpr char msg[]  = "hello world!!!!";
 
         sa_family_t ip_ver = AF_INET;
         const char* ip = "127.0.0.1";
@@ -92,17 +93,35 @@ TEST_SUITE("UDP")
             // Setup the sockaddr object
             encode_ip(ip_ver, ip, &dst_ip);
 
+            // Begin listening for a packet
+            std::thread receiver(
+                [port, msg]()
+                {
+                    // Listen for sent packet
+                    constexpr size_t        RX_DATA_LEN = 255;
+
+                    uint8_t                 rx_data[RX_DATA_LEN] {};
+                    struct sockaddr_storage rx_sender_info {};
+                    socklen_t               rx_sender_info_len {};
+
+                    // Blocking reception call
+                    UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
+
+                    // Check sender is as expected
+                    // TODO
+                    // CHECK(decode_ip(rx_sender_info) == ip);
+
+                    // Check the packets contents match
+                    CHECK(std::equal(std::begin(rx_data), std::end(rx_data),
+                                std::begin(msg), std::end(msg)));
+                }
+            );
+
             // Send the packet
-            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg.data(), msg.size());
+            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg, std::size(msg));
 
-            // Listen for sent packet
-            constexpr size_t        RX_DATA_LEN = 255;
-            uint8_t                 rx_data[RX_DATA_LEN] {};
-            struct sockaddr_storage rx_sender_info {};
-            socklen_t               rx_sender_info_len {};
-
-            // Blocking reception call
-            // UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
+            // Complete receiver task
+            receiver.join();
 
             // Verify it reported success
             CHECK(bytes_sent > 0);
@@ -110,7 +129,7 @@ TEST_SUITE("UDP")
             // Check msg length matches
             // WARN: This assumption falls apart for pkts
             // longer than the allowed max UDP pkt length
-            CHECK(bytes_sent == msg.size());
+            CHECK(bytes_sent == std::size(msg));
 
             // TODO
             // Check reception
