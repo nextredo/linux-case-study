@@ -6,8 +6,8 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     struct addrinfo hints {};
     struct addrinfo* result = nullptr;
 
-    // TODO make this selectable on call
-    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
+    // TODO make this selectable on call (enum class)
+    hints.ai_family = AF_INET; // IPv4 or IPv6
     hints.ai_socktype = SOCK_DGRAM; // UDP
     hints.ai_flags = AI_PASSIVE; // Automatically fill in my IP
     hints.ai_protocol = 0; // Any protocol
@@ -63,10 +63,7 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     bytes_recvd = recvfrom(socket_fd, data, len, 0,
             (struct sockaddr*)senderAddr, senderAddrLen);
     if (bytes_recvd <= 0)
-    {
         perror("Reception socket reception");
-        goto cleanup;
-    }
 
     close(socket_fd);
 
@@ -80,22 +77,25 @@ cleanup:
 
 ssize_t UdpBroker::send(const struct sockaddr_storage* addr, const char* port, const uint8_t* data, const size_t len)
 {
+    // Convert sockaddr_storage to appropriate format for the address family
+    struct sockaddr_in* addr_in = (struct sockaddr_in*)addr;
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr_in->sin_addr, ip_str, INET_ADDRSTRLEN);
+
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
     struct addrinfo* server_info = nullptr;
 
     // TODO make this selectable on call
-    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
+    hints.ai_family = addr->ss_family; // Use the address family from the provided address
     hints.ai_socktype = SOCK_DGRAM; // UDP
-    hints.ai_addr = (struct sockaddr*)addr; // Destination address
     // hints.ai_protocol = 0; // Any protocol
 
     int socket_fd      = 0;
     int gai_ret        = 0;
-    int connect_ret    = 0;
     ssize_t bytes_sent = -1;
 
-    gai_ret = getaddrinfo(nullptr, port, &hints, &server_info);
+    gai_ret = getaddrinfo(ip_str, port, &hints, &server_info);
     if (gai_ret != 0)
     {
         fprintf(stderr, "get addr info error: %s\n", gai_strerror(gai_ret));
@@ -108,18 +108,16 @@ ssize_t UdpBroker::send(const struct sockaddr_storage* addr, const char* port, c
     errno = 0;
     socket_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
     if (socket_fd == -1)
+    {
+        perror("Send socket creation");
         goto cleanup;
+    }
 
     errno = 0;
     bytes_sent = sendto(socket_fd, data, len, 0,
             server_info->ai_addr, server_info->ai_addrlen);
     if (bytes_sent == -1)
-        goto cleanup;
-
-    // Alternatively, can use connect() then just send() and recv()
-    // for datagram communications
-    // Alternatively, use sendto() and recvfrom() on a UDP socket
-    // when not calling connect() first
+        perror("Send socket sendto");
 
     close(socket_fd);
 

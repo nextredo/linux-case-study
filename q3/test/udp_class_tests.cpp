@@ -25,25 +25,27 @@ std::string decode_ip(struct sockaddr_storage* sa)
     std::string str;
     auto af = sa->ss_family;
     void* ip = nullptr;
+    char ip_buffer[INET6_ADDRSTRLEN];
 
     // TODO refactor decode and encode ip to share the pointer casting stuff
     switch (af)
     {
         case AF_INET:
-            str.resize(INET_ADDRSTRLEN);
-            ip = &((struct sockaddr_in*)(&sa))->sin_addr;
+            ip = &((struct sockaddr_in*)sa)->sin_addr;
+            inet_ntop(af, ip, ip_buffer, INET_ADDRSTRLEN);
+            str = ip_buffer;
             break;
 
         case AF_INET6:
-            str.resize(INET6_ADDRSTRLEN);
-            ip = &((struct sockaddr_in6*)(&sa))->sin6_addr;
+            ip = &((struct sockaddr_in6*)sa)->sin6_addr;
+            inet_ntop(af, ip, ip_buffer, INET6_ADDRSTRLEN);
+            str = ip_buffer;
             break;
 
         default:
             break;
     };
 
-    inet_ntop(af, ip, str.data(), str.length());
     return str;
 }
 
@@ -55,11 +57,11 @@ bool encode_ip(const sa_family_t ipVer, const char* ip, struct sockaddr_storage*
     switch (ipVer)
     {
         case AF_INET:
-            ip_output = &((struct sockaddr_in*)(&ipData))->sin_addr;
+            ip_output = &((struct sockaddr_in*)ipData)->sin_addr;
             break;
 
         case AF_INET6:
-            ip_output = &((struct sockaddr_in6*)(&ipData))->sin6_addr;
+            ip_output = &((struct sockaddr_in6*)ipData)->sin6_addr;
             break;
 
         default:
@@ -67,7 +69,7 @@ bool encode_ip(const sa_family_t ipVer, const char* ip, struct sockaddr_storage*
             break;
     };
 
-    ret = inet_pton(ipData->ss_family, ip, ip_output);
+    ret = inet_pton(ipVer, ip, ip_output);
     return (ret == 1);
 }
 
@@ -135,21 +137,25 @@ TEST_SUITE("UDP")
                     // Listen for sent packet
                     constexpr size_t        RX_DATA_LEN = 255;
 
-                    uint8_t                 rx_data[RX_DATA_LEN] {};
+                    // TODO std vector instead
+                    uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage rx_sender_info {};
-                    socklen_t               rx_sender_info_len {};
+                    socklen_t rx_sender_info_len = sizeof(rx_sender_info);
 
                     // Blocking reception call
-                    UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
+                    auto bytes_recvd = UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
+
+                    // Check expected no. of bytes received
+                    CHECK(bytes_recvd == std::size(msg));
 
                     // Check sender is as expected
-                    CHECK(decode_ip(&rx_sender_info) == std::string(std::begin(ip), std::end(ip)));
+                    CHECK(decode_ip(&rx_sender_info) == std::string(ip));
 
-                    // Check the packets contents match
-                    CAPTURE(std::string(std::begin(rx_data), std::end(rx_data)));
+                    // Check the packets contents match (only compare the received bytes, not entire array)
+                    CAPTURE(std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd));
                     CAPTURE(std::string(std::begin(msg),     std::end(msg)));
 
-                    CHECK(std::equal(std::begin(rx_data), std::end(rx_data),
+                    CHECK(std::equal(std::begin(rx_data), std::begin(rx_data) + bytes_recvd,
                                      std::begin(msg), std::end(msg)));
                 }
             );
@@ -163,12 +169,10 @@ TEST_SUITE("UDP")
             // Complete receiver task
             receiver.join();
 
-            // Verify it reported success
-            CHECK(bytes_sent > 0);
-
             // Check msg length matches
             // WARN: This assumption falls apart for pkts
-            // longer than the allowed max UDP pkt length
+            // longer than the allowed max UDP pkt length.
+            // >0 should be sufficient
             CHECK(bytes_sent == std::size(msg));
 
             // TODO
