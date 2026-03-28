@@ -25,16 +25,19 @@
 class UdpBroker
 {
 private:
-    static constexpr auto BUF_LEN = 1024;
 
 public:
     /// @brief Sends a UDP packet
-    ssize_t send(struct sockaddr_storage* addr, const char* port, const uint8_t* data, size_t len);
+    static ssize_t send(const struct sockaddr_storage* addr, const char* port, const uint8_t* data, const size_t len);
 
-    bool recv();
+    /// @brief Receives a UDP packet
+    /// @param      port Host port to listen on
+    /// @param[out] data Buffer to put received data in
+    /// @param      len  Length of the data buffer
+    static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen);
 
     /// @brief Sends a UDP packet instantly
-    bool sendImmediate(struct in_addr* ip, uint16_t port, std::vector<uint8_t>& data);
+    bool sendImmediate(const struct in_addr* ip, uint16_t port, std::vector<uint8_t>& data);
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelay();

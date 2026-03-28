@@ -2,6 +2,9 @@
 #include "doctest.h"
 #include "udp_class.hpp"
 
+#include <thread>
+#include <atomic>
+
 #include <unistd.h>
 #include <sys/socket.h>
 
@@ -45,15 +48,13 @@ TEST_SUITE("UDP")
 
     TEST_CASE("loopback")
     {
-        const char* port = "55555";
-        std::string msg  = "hello world!!!!";
+        const char* const port = "55555";
+        std::string msg        = "hello world!!!!";
 
         sa_family_t ip_ver = AF_INET;
         const char* ip = "127.0.0.1";
         struct sockaddr_storage dst_ip {};
         encode_ip(ip_ver, ip, &dst_ip);
-
-        UdpBroker broker;
 
         SUBCASE("sendImmediate")
         {
@@ -91,14 +92,17 @@ TEST_SUITE("UDP")
             // Setup the sockaddr object
             encode_ip(ip_ver, ip, &dst_ip);
 
-            // Begin listening
-            // TODO
-            // bool receiving = broker.listen(dst_ip, port);
-
             // Send the packet
-            // TODO fix it sending on both IPv4 and v6 lmao??
-            auto bytes_sent = broker.send(&dst_ip, port,
-                    (const uint8_t*)msg.data(), msg.size());
+            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg.data(), msg.size());
+
+            // Listen for sent packet
+            constexpr size_t        RX_DATA_LEN = 255;
+            uint8_t                 rx_data[RX_DATA_LEN] {};
+            struct sockaddr_storage rx_sender_info {};
+            socklen_t               rx_sender_info_len {};
+
+            // Blocking reception call
+            // UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
 
             // Verify it reported success
             CHECK(bytes_sent > 0);
