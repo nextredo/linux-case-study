@@ -22,7 +22,7 @@
 // TODO errno usage
 // TODO debug function to print dest ip (inet_ntop INET_ADDRSTRLEN)
 
-class UdpSender
+class UdpBroker
 {
 private:
     static constexpr auto BUF_LEN = 1024;
