@@ -12,8 +12,8 @@
 
 // Include guard
 // Alternatively, use `#pragma once`
-#ifndef UDP_SENDER_H
-#define UDP_SENDER_H
+#ifndef UDP_CLASS_H
+#define UDP_CLASS_H
 
 // TODO warn on port usage under 1024 (superuser only)
 // TODO warn ports already in use
@@ -47,4 +47,4 @@ public:
 };
 
 
-#endif // UDP_SENDER_H
+#endif // UDP_CLASS_H

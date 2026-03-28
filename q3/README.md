@@ -16,8 +16,7 @@
   - Refactor - clean the code up, ensuring it still passes
 
 ## Assumptions
-- IPv4, not IPv6
--
+- N/A
 
 ## Building
 - Done through CMake
@@ -30,8 +29,11 @@ mkdir build && cd build
 cmake .. && make
 
 # Run registered unit tests
-# alternatively, run `./build/test/udp_class_tests`
 ctest
+
+# Alternatively, run the following to run the only existing set of tests
+# Optionally add the `-s` switch to show passing tests
+./build/test/udp_class_tests -s
 ```
 
 [kb-tdd]: https://www.amazon.com.au/Test-Driven-Development-Kent-Beck/dp/0321146530

@@ -57,48 +57,62 @@ TEST_SUITE("UDP")
 
         SUBCASE("sendImmediate")
         {
-            SUBCASE("addresses")
-            {
-                SUBCASE("IPv4")
-                {
-                    constexpr const char* IPV4_ADDRS[] = {
-                        "127.0.0.2", "127.0.0.3",
-                    };
-                    SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
-                    SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
-                }
-                SUBCASE("IPv6")
-                {
-                    ip_ver = AF_INET6;
-                    constexpr const char* IPV6_ADDRS[] = {
-                        "::1", "::2",
-                    };
-                    SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
-                    SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
-                }
-            }
+            // SUBCASE("addresses")
+            // {
+            //     SUBCASE("IPv4")
+            //     {
+            //         constexpr const char* IPV4_ADDRS[] = {
+            //             "127.0.0.2", "127.0.0.3",
+            //         };
+            //         SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
+            //         SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
+            //     }
+            //     SUBCASE("IPv6")
+            //     {
+            //         ip_ver = AF_INET6;
+            //         constexpr const char* IPV6_ADDRS[] = {
+            //             "::1", "::2",
+            //         };
+            //         SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
+            //         SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
+            //     }
+            // }
+            //
+            // SUBCASE("port")
+            // {
+            //     constexpr const char* PORTS[] = {
+            //         "12345", "9876",
+            //     };
+            //     SUBCASE(PORTS[0]) port = PORTS[0];
+            //     SUBCASE(PORTS[1]) port = PORTS[1];
+            // }
 
-            SUBCASE("port")
-            {
-                constexpr const char* PORTS[] = {
-                    "12345", "9876",
-                };
-                SUBCASE(PORTS[0]) port = PORTS[0];
-                SUBCASE(PORTS[1]) port = PORTS[1];
-            }
-
+            // --- test setup ---
             // Setup the sockaddr object
             encode_ip(ip_ver, ip, &dst_ip);
 
+            // Begin listening
+            // TODO
+            // bool receiving = broker.listen(dst_ip, port);
+
             // Send the packet
+            // TODO fix it sending on both IPv4 and v6 lmao??
             auto bytes_sent = broker.send(&dst_ip, port,
                     (const uint8_t*)msg.data(), msg.size());
 
             // Verify it reported success
             CHECK(bytes_sent > 0);
-            // TODO check msg length matches
 
-            // TODO fix it sending on both IPv4 and v6 lmao??
+            // Check msg length matches
+            // WARN: This assumption falls apart for pkts
+            // longer than the allowed max UDP pkt length
+            CHECK(bytes_sent == msg.size());
+
+            // TODO
+            // Check reception
+            // CHECK(broker.bytesReceived() == msg.size());
+            // CHECK(broker.recv() == msg);
+
 
             // TODO check pkt actually received
                 // wireshark, or via C
