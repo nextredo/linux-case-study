@@ -1,30 +1,5 @@
 #include "udp_class.hpp"
 
-std::string UdpBroker::ipNetworkToPresentation(struct addrinfo* addrInfo)
-{
-    std::string str;
-    auto af = addrInfo->ai_family;
-
-    switch (af)
-    {
-        case AF_INET:
-            str.resize(INET_ADDRSTRLEN);
-            break;
-
-        case AF_INET6:
-            str.resize(INET6_ADDRSTRLEN);
-            break;
-
-        default:
-            break;
-    };
-
-    // TODO this sa_data cast will probably fail for IPv6
-    inet_ntop(af, addrInfo->ai_addr->sa_data, str.data(), str.length());
-    return str;
-}
-
-
 ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen)
 {
     // Init struct to default values (brace --> value initialisation)
@@ -44,7 +19,7 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     int listen_ret      = 0;
     ssize_t bytes_recvd = -1;
 
-    timeval sock_timeout = { .tv_sec = 2 };
+    timeval sock_timeout = { .tv_sec = 3 };
 
     // TODO
     // int yes=1;
@@ -53,7 +28,7 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     gai_ret = getaddrinfo(nullptr, port, &hints, &result);
     if (gai_ret < 0)
     {
-        fprintf(stderr, "get addr info error: %s\n", gai_strerror(gai_ret));
+        fprintf(stderr, "Reception: get addr info error: %s\n", gai_strerror(gai_ret));
         goto cleanup;
     }
 
@@ -63,23 +38,35 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     errno = 0;
     socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     if (socket_fd == -1)
+    {
+        perror("Reception socket creation");
         goto cleanup;
+    }
 
     errno = 0;
     bind_ret = bind(socket_fd, result->ai_addr, result->ai_addrlen);
     if (bind_ret == -1)
+    {
+        perror("Reception socket bind");
         goto cleanup;
+    }
 
     errno = 0;
     sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
+    {
+        perror("Reception socket options");
         goto cleanup;
+    }
 
     errno = 0;
     bytes_recvd = recvfrom(socket_fd, data, len, 0,
             (struct sockaddr*)senderAddr, senderAddrLen);
     if (bytes_recvd <= 0)
+    {
+        perror("Reception socket reception");
         goto cleanup;
+    }
 
     close(socket_fd);
 
@@ -87,7 +74,6 @@ cleanup:
     // TODO wrap addrinfo in a class
         // so it frees its memory on destruction
     freeaddrinfo(result);
-    // perror("Errored");
     return bytes_recvd;
 }
 
@@ -141,7 +127,7 @@ cleanup:
     // TODO wrap addrinfo in a class
         // so it frees its memory on destruction
     freeaddrinfo(server_info);
-    // perror("Errored");
+    perror("Send errored");
     return bytes_sent;
 }
 

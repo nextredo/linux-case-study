@@ -2,6 +2,7 @@
 #include "doctest.h"
 #include "udp_class.hpp"
 
+#include <chrono>
 #include <thread>
 #include <algorithm>
 #include <iterator>
@@ -9,8 +10,42 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+using namespace std::chrono_literals;
+
 namespace
 {
+
+
+// std::string UdpBroker::ipNetworkToPresentation(struct addrinfo* addrInfo)
+    // auto af = addrInfo->ai_family;
+    // inet_ntop(af, addrInfo->ai_addr->sa_data, str.data(), str.length());
+
+std::string decode_ip(struct sockaddr_storage* sa)
+{
+    std::string str;
+    auto af = sa->ss_family;
+    void* ip = nullptr;
+
+    // TODO refactor decode and encode ip to share the pointer casting stuff
+    switch (af)
+    {
+        case AF_INET:
+            str.resize(INET_ADDRSTRLEN);
+            ip = &((struct sockaddr_in*)(&sa))->sin_addr;
+            break;
+
+        case AF_INET6:
+            str.resize(INET6_ADDRSTRLEN);
+            ip = &((struct sockaddr_in6*)(&sa))->sin6_addr;
+            break;
+
+        default:
+            break;
+    };
+
+    inet_ntop(af, ip, str.data(), str.length());
+    return str;
+}
 
 bool encode_ip(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData)
 {
@@ -51,9 +86,9 @@ TEST_SUITE("UDP")
     {
         constexpr char port[] = "55555";
         constexpr char msg[]  = "hello world!!!!";
+        constexpr char ip[]   = "127.0.0.1";
 
         sa_family_t ip_ver = AF_INET;
-        const char* ip = "127.0.0.1";
         struct sockaddr_storage dst_ip {};
         encode_ip(ip_ver, ip, &dst_ip);
 
@@ -95,7 +130,7 @@ TEST_SUITE("UDP")
 
             // Begin listening for a packet
             std::thread receiver(
-                [port, msg]()
+                [port, msg, ip]()
                 {
                     // Listen for sent packet
                     constexpr size_t        RX_DATA_LEN = 255;
@@ -108,14 +143,19 @@ TEST_SUITE("UDP")
                     UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
 
                     // Check sender is as expected
-                    // TODO
-                    // CHECK(decode_ip(rx_sender_info) == ip);
+                    CHECK(decode_ip(&rx_sender_info) == std::string(std::begin(ip), std::end(ip)));
 
                     // Check the packets contents match
+                    CAPTURE(std::string(std::begin(rx_data), std::end(rx_data)));
+                    CAPTURE(std::string(std::begin(msg),     std::end(msg)));
+
                     CHECK(std::equal(std::begin(rx_data), std::end(rx_data),
-                                std::begin(msg), std::end(msg)));
+                                     std::begin(msg), std::end(msg)));
                 }
             );
+
+            // Wait for reception thread to begin
+            std::this_thread::sleep_for(1s);
 
             // Send the packet
             auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg, std::size(msg));

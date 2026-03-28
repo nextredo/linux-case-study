@@ -49,8 +49,6 @@ public:
     /// @param[out] senderAddrLen  Length of the received sender info
     static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen);
 
-    static ssize_t recvTS(const char* port, std::atomic<udp_packet_t>* pkt);
-
     /// @brief Sends a UDP packet instantly
     bool sendImmediate(const struct in_addr* ip, uint16_t port, std::vector<uint8_t>& data);
 
