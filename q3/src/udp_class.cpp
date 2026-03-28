@@ -57,11 +57,12 @@ ssize_t UdpSender::send(struct sockaddr_storage* addr, const char* port, const u
         goto cleanup;
     }
 
-    if (result->ai_next != nullptr)
-    {
-        fprintf(stderr, "multiple addr infos\n");
-        goto cleanup;
-    }
+    // TODO ???
+    // if (result->ai_next != nullptr)
+    // {
+    //     fprintf(stderr, "multiple addr infos\n");
+    //     goto cleanup;
+    // }
 
     errno = 0;
     socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);

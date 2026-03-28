@@ -21,13 +21,13 @@ TEST_SUITE("UDP")
                 &((struct sockaddr_in*)(&dst_ip))->sin_addr
         );
         const char* port = "55555";
-        std::vector<uint8_t> msg {1, 2, 3, 4};
+        std::string msg = "hello world!!!!";
 
         UdpSender sender;
 
         SUBCASE("sendImmediate")
         {
-            CHECK(sender.send(&dst_ip, port, msg.data(), msg.size()) > 0);
+            CHECK(sender.send(&dst_ip, port, (const uint8_t*)msg.data(), msg.size()) > 0);
 
 
             // TODO check pkt actually received
