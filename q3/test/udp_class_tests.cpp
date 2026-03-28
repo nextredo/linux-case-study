@@ -15,17 +15,31 @@ TEST_SUITE("UDP")
 
     TEST_CASE("loopback")
     {
-        uint16_t dst_port = 3;
-        struct in_addr dst_ip {};
-        inet_aton("127.0.0.1", &dst_ip);
-        std::vector<uint8_t> data {1, 2, 3, 4};
+        struct sockaddr_storage dst_ip {};
+        inet_pton(AF_INET,
+                "127.0.0.1",
+                &((struct sockaddr_in*)(&dst_ip))->sin_addr
+        );
+        const char* port = "55555";
+        std::vector<uint8_t> msg {1, 2, 3, 4};
 
         UdpSender sender;
 
         SUBCASE("sendImmediate")
         {
-            CHECK(sender.sendImmediate(&dst_ip, dst_port, data));
-            // TODO check pkt actuall received
+            CHECK(sender.send(&dst_ip, port, msg.data(), msg.size()) > 0);
+
+
+            // TODO check pkt actually received
+                // wireshark, or via C
+        }
+
+        SUBCASE("sendDelay")
+        {
+        }
+
+        SUBCASE("sendPeriodic")
+        {
         }
 
         CHECK(true);
