@@ -5,6 +5,34 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+namespace
+{
+
+bool encode_ip(const char* ip, struct sockaddr_storage* ipData)
+{
+    int ret = -1;
+    void* ip_output = nullptr;
+
+    switch (ipData->ss_family)
+    {
+        case AF_INET:
+            ip_output = &((struct sockaddr_in*)(&ipData))->sin_addr;
+            break;
+
+        case AF_INET6:
+            ip_output = &((struct sockaddr_in6*)(&ipData))->sin6_addr;
+            break;
+
+        default:
+            break;
+    };
+
+    ret = inet_pton(ipData->ss_family, ip, ip_output);
+    return (ret == 1);
+}
+
+}
+
 TEST_SUITE("UDP")
 {
     TEST_CASE("object")
@@ -15,11 +43,14 @@ TEST_SUITE("UDP")
 
     TEST_CASE("loopback")
     {
-        const char* ip   = "127.0.0.1";
         const char* port = "55555";
         std::string msg  = "hello world!!!!";
 
-        UdpBroker sender;
+        const char* ip = "127.0.0.1";
+        struct sockaddr_storage dst_ip {};
+        encode_ip(ip, &dst_ip);
+
+        UdpBroker broker;
 
         SUBCASE("sendImmediate")
         {
@@ -30,6 +61,7 @@ TEST_SUITE("UDP")
                 };
                 SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
                 SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
+                encode_ip(ip, &dst_ip);
             }
             SUBCASE("IPv6")
             {
@@ -38,6 +70,7 @@ TEST_SUITE("UDP")
                 };
                 SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
                 SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
+                encode_ip(ip, &dst_ip);
             }
             SUBCASE("port")
             {
@@ -48,11 +81,7 @@ TEST_SUITE("UDP")
                 SUBCASE(PORTS[1]) port = PORTS[1];
             }
 
-            struct sockaddr_storage dst_ip {};
-            inet_pton(AF_INET, ip,
-                    &((struct sockaddr_in*)(&dst_ip))->sin_addr);
-
-            auto bytes_sent = sender.send(&dst_ip, port,
+            auto bytes_sent = broker.send(&dst_ip, port,
                     (const uint8_t*)msg.data(), msg.size());
 
             CHECK(bytes_sent > 0);

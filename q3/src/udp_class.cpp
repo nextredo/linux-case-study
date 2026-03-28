@@ -1,6 +1,6 @@
 #include "udp_class.hpp"
 
-std::string UdpSender::ipNetworkToPresentation(struct addrinfo* addrInfo)
+std::string UdpBroker::ipNetworkToPresentation(struct addrinfo* addrInfo)
 {
     std::string str;
     auto af = addrInfo->ai_family;
@@ -33,7 +33,7 @@ std::string UdpSender::ipNetworkToPresentation(struct addrinfo* addrInfo)
 // int yes=1;
 // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
-ssize_t UdpSender::send(struct sockaddr_storage* addr, const char* port, const uint8_t* data, size_t len)
+ssize_t UdpBroker::send(struct sockaddr_storage* addr, const char* port, const uint8_t* data, size_t len)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -41,7 +41,6 @@ ssize_t UdpSender::send(struct sockaddr_storage* addr, const char* port, const u
 
     hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
     hints.ai_socktype = SOCK_DGRAM; // UDP
-    // TODO unsure if I can do this ngl
     hints.ai_addr = (struct sockaddr*)addr; // Destination address
     hints.ai_protocol = 0; // Any protocol
 
@@ -90,3 +89,5 @@ cleanup:
     perror("Errored");
     return -1;
 }
+
+
