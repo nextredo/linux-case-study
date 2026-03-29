@@ -22,6 +22,17 @@ namespace
 // Maximum size to use for packet reception calls
 constexpr size_t RX_DATA_LEN = 255;
 
+// WARN: Will only work with std::chrono::duration types
+// TODO add C++20 concepts to constrain this??
+template<typename T>
+auto fmt_as_s(T time)
+{
+    using namespace std::chrono;
+
+    // NOTE: Use std::format in C++20 and above
+    return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
+};
+
 }
 
 TEST_SUITE("UDP")
@@ -134,25 +145,25 @@ TEST_SUITE("UDP")
         seconds delay = 0s;
 
         UdpBroker sender;
-        bool      expect_success = false;
+        bool      expect_send_success = false;
 
         std::function<void()> rx_fn;
 
         SUBCASE("out_of_range")
         {
-            expect_success = false;
+            expect_send_success = false;
             SUBCASE("underrange") delay = 0s;
             SUBCASE("overrange")  delay = 256s;
 
             // Expect it to fail, so we don't need to check returns
-            // For the paranoid, we could check that it doesn't send a packet even
-            // after the specified delay
+            // For the paranoid, we could check that it doesn't send a packet
+            // even after the specified delay
             rx_fn = []() {};
         }
 
         SUBCASE("in_range")
         {
-            expect_success = true;
+            expect_send_success = true;
             SUBCASE("after_1s") delay = 1s;
             SUBCASE("after_2s") delay = 2s;
             SUBCASE("after_5s") delay = 5s;
@@ -183,12 +194,6 @@ TEST_SUITE("UDP")
                     REQUIRE(bytes_recvd == std::strlen(msg));
                     CHECK((const char*)rx_data == msg);
 
-                    // NOTE: Use std::format in C++20 and above
-                    auto fmt_as_s = [](auto t)
-                    {
-                        return duration<double, std::milli>(duration_cast<microseconds>(t)).count();
-                    };
-
                     // Perform time checks & logging
                     auto time_to_rx = end - start;
                     INFO("took ",        fmt_as_s(time_to_rx), " ms");
@@ -214,69 +219,72 @@ TEST_SUITE("UDP")
         rx_future.get();
 
         // Check function returned as expected
-        CHECK(queued_send == expect_success);
+        CHECK(queued_send == expect_send_success);
     }
 
-    // TEST_CASE("sendPeriodic")
-    // {
-    //     using namespace std::chrono;
-    //
-    //     UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
-    //     const char* dst_ip         = "127.0.0.1";
-    //     const char* dst_port       = "57474";
-    //     const char* msg            = "periodic send pkt contents";
-    //
-    //     seconds interval         = 0s;
-    //     seconds rx_timeout       = 0s;
-    //     seconds rx_thread_timout = 0s;
-    //
-    //     UdpBroker sender;
-    //     bool      expect_success = false;
-    //
-    //     std::function<void()> rx_fn;
-    //
-    //     SUBCASE("out_of_range")
-    //     {
-    //         expect_success = false;
-    //         SUBCASE("underrange") interval = 0s;
-    //         SUBCASE("overrange")  interval = 256s;
-    //     }
-    //
-    //     SUBCASE("1_packet")
-    //     {
-    //         expect_success = true;
-    //         SUBCASE("short") interval = 1s;
-    //         SUBCASE("long")  interval = 3s;
-    //
-    //         // Wait for 1 interval's worth of packets, with tolerance
-    //         rx_timeout = interval + 1s;
-    //     }
-    //
-    //     SUBCASE("3_packets")
-    //     {
-    //         expect_success = true;
-    //         SUBCASE("short") interval = 1s;
-    //         SUBCASE("long")  interval = 3s;
-    //
-    //         // Wait for 1 intervals' worth of packets, with tolerance
-    //         rx_timeout = interval * 3 + 1s;
-    //     }
-    //
-    //     // -------------------------- Test setup ---------------------------
-    //     // Begin async func to check for packet reception (or not)
-    //     auto rx_future = std::async(std::launch::async, rx_fn);
-    //
-    //     // Give receiver thread a headstart to begin listening
-    //     std::this_thread::sleep_for(100ms);
-    //
-    //     // Run the test
-    //     bool queued_send = sender.sendPeriodic(dst_ip, dst_port,
-    //             (const uint8_t*)msg, std::strlen(msg), interval);
-    //
-    //     // Wait for the receiver task to finish up
-    //     rx_future.get();
-    //
-    //     // Check function returned as expected
-    //     CHECK(queued_send == expect_success);
-    // }
+    TEST_CASE("sendPeriodic")
+    {
+        using namespace std::chrono;
+
+        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
+        const char* dst_ip         = "127.0.0.1";
+        const char* dst_port       = "57474";
+        const char* msg            = "periodic send pkt contents";
+
+        seconds interval         = 0s;
+        seconds rx_timeout       = 0s;
+        seconds rx_thread_timout = 0s;
+
+        UdpBroker sender;
+        bool      expect_send_success = false;
+
+        std::function<void()> rx_fn;
+
+        SUBCASE("out_of_range")
+        {
+            expect_send_success = false;
+            SUBCASE("underrange") interval = 0s;
+            SUBCASE("overrange")  interval = 256s;
+
+            // Expect it to fail, so we don't need to check returns
+            rx_fn = []() {};
+        }
+
+        SUBCASE("1_packet")
+        {
+            expect_send_success = true;
+            SUBCASE("short") interval = 1s;
+            SUBCASE("long")  interval = 3s;
+
+            // Wait for 1 interval's worth of packets, with tolerance
+            rx_timeout = interval + 1s;
+        }
+
+        SUBCASE("3_packets")
+        {
+            expect_send_success = true;
+            SUBCASE("short") interval = 1s;
+            SUBCASE("long")  interval = 3s;
+
+            // Wait for 1 intervals' worth of packets, with tolerance
+            rx_timeout = interval * 3 + 1s;
+        }
+
+        // -------------------------- Test setup ---------------------------
+        // Begin async func to check for packet reception (or not)
+        auto rx_future = std::async(std::launch::async, rx_fn);
+
+        // Give receiver thread a headstart to begin listening
+        std::this_thread::sleep_for(100ms);
+
+        // Run the test
+        bool queued_send = sender.sendPeriodic(dst_ip, dst_port,
+                (const uint8_t*)msg, std::strlen(msg), interval);
+
+        // Wait for the receiver task to finish up
+        rx_future.get();
+
+        // Check function returned as expected
+        CHECK(queued_send == expect_send_success);
+    }
 }
