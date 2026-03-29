@@ -67,12 +67,12 @@ TEST_SUITE("UDP")
                 SUBCASE(DST_PORTS[0]) dst_port = DST_PORTS[0];
                 SUBCASE(DST_PORTS[1]) dst_port = DST_PORTS[1];
             }
-            //
-            // SUBCASE("msgs")
-            // {
-            //     SUBCASE(MSGS[0]) msg = MSGS[0];
-            //     SUBCASE(MSGS[1]) msg = MSGS[1];
-            // }
+
+            SUBCASE("msgs")
+            {
+                SUBCASE(MSGS[0]) msg = MSGS[0];
+                SUBCASE(MSGS[1]) msg = MSGS[1];
+            }
 
             // -------------------------- Test setup ---------------------------
             // Begin listening for a packet
