@@ -15,37 +15,33 @@ using namespace std::chrono_literals;
 namespace
 {
 
-
-// std::string UdpBroker::ipNetworkToPresentation(struct addrinfo* addrInfo)
-    // auto af = addrInfo->ai_family;
-    // inet_ntop(af, addrInfo->ai_addr->sa_data, str.data(), str.length());
-
 std::string decode_ip(struct sockaddr_storage* sa)
 {
     std::string str;
     auto af = sa->ss_family;
     void* ip = nullptr;
-    char ip_buffer[INET6_ADDRSTRLEN];
 
     // TODO refactor decode and encode ip to share the pointer casting stuff
     switch (af)
     {
         case AF_INET:
+            str.resize(INET_ADDRSTRLEN);
             ip = &((struct sockaddr_in*)sa)->sin_addr;
-            inet_ntop(af, ip, ip_buffer, INET_ADDRSTRLEN);
-            str = ip_buffer;
             break;
 
         case AF_INET6:
+            str.resize(INET6_ADDRSTRLEN);
             ip = &((struct sockaddr_in6*)sa)->sin6_addr;
-            inet_ntop(af, ip, ip_buffer, INET6_ADDRSTRLEN);
-            str = ip_buffer;
             break;
 
         default:
             break;
     };
 
+    inet_ntop(af, ip, str.data(), str.size());
+
+    // Truncate string object to length of null-terminated contents
+    str.resize(std::strlen(str.c_str()));
     return str;
 }
 
