@@ -83,8 +83,9 @@ TEST_SUITE("UDP")
     TEST_CASE("loopback")
     {
         constexpr char port[] = "55555";
-        constexpr char msg[]  = "hello world!!!!";
         constexpr char ip[]   = "127.0.0.1";
+
+        std::string msg = "hello world!!!!";
 
         sa_family_t ip_ver = AF_INET;
         struct sockaddr_storage dst_ip {};
@@ -131,28 +132,25 @@ TEST_SUITE("UDP")
                 [port, msg, ip]()
                 {
                     // Listen for sent packet
-                    constexpr size_t        RX_DATA_LEN = 255;
+                    constexpr size_t RX_DATA_LEN = 255;
 
                     // TODO std vector instead
                     uint8_t rx_data[RX_DATA_LEN] {};
-                    struct sockaddr_storage rx_sender_info {};
-                    socklen_t rx_sender_info_len = sizeof(rx_sender_info);
+                    struct sockaddr_storage sender_info {};
+                    socklen_t sender_info_len = sizeof(sender_info);
 
                     // Blocking reception call
-                    auto bytes_recvd = UdpBroker::recv(port, rx_data, RX_DATA_LEN, &rx_sender_info, &rx_sender_info_len);
+                    auto bytes_recvd = UdpBroker::recv(port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
 
                     // Check expected no. of bytes received
                     CHECK(bytes_recvd == std::size(msg));
 
                     // Check sender is as expected
-                    CHECK(decode_ip(&rx_sender_info) == std::string(ip));
+                    CHECK(decode_ip(&sender_info) == std::string(ip));
 
                     // Check the packets contents match (only compare the received bytes, not entire array)
-                    CAPTURE(std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd));
-                    CAPTURE(std::string(std::begin(msg),     std::end(msg)));
-
-                    CHECK(std::equal(std::begin(rx_data), std::begin(rx_data) + bytes_recvd,
-                                     std::begin(msg), std::end(msg)));
+                    auto received_msg = std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd);
+                    CHECK(received_msg == msg);
                 }
             );
 
@@ -160,7 +158,7 @@ TEST_SUITE("UDP")
             std::this_thread::sleep_for(1s);
 
             // Send the packet
-            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg, std::size(msg));
+            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg.data(), std::size(msg));
 
             // Complete receiver task
             receiver.join();
