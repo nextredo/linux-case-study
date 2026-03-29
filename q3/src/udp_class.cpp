@@ -169,6 +169,8 @@ ssize_t UdpBroker::send(const char* ip, const char* port, const uint8_t* data, c
         goto cleanup;
     }
 
+    // TODO insert `bind` function to allow sending from a specific IP
+
     errno = 0;
     bytes_sent = sendto(socket_fd, data, len, 0,
             server_info->ai_addr, server_info->ai_addrlen);

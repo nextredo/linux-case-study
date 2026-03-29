@@ -29,14 +29,14 @@ TEST_SUITE("UDP")
     TEST_CASE("loopback")
     {
         // Set test permutations
-        constexpr const char* IPV4_ADDRS[] = {"127.0.0.1",    "127.0.0.2"};
-        constexpr const char* IPV6_ADDRS[] = {"::1",          "::2"};
+        constexpr const char* IPV4_DSTS[] = {"127.0.0.1",    "127.0.0.2"};
+        constexpr const char* IPV6_DSTS[] = {"::1",          "::2"};
         constexpr const char* PORTS[]      = {"12345",        "55555"};
         constexpr const char* MSGS[]       = {"hello world!", "hi earth!"};
 
         // Set default test variables
-        const char* ip   = IPV4_ADDRS[0];
-        const char* port = PORTS[0];
+        const char* dst_ip   = IPV4_DSTS[0];
+        const char* dst_port = PORTS[0];
         std::string msg  = MSGS[0];
 
         SUBCASE("sendImmediate")
@@ -45,13 +45,13 @@ TEST_SUITE("UDP")
             {
                 SUBCASE("IPv4")
                 {
-                    SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
-                    SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
+                    SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
+                    SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
                 }
                 // SUBCASE("IPv6")
                 // {
-                //     SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
-                //     SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
+                //     SUBCASE(IPV6_DSTS[0]) ip = IPV6_DSTS[0];
+                //     SUBCASE(IPV6_DSTS[1]) ip = IPV6_DSTS[1];
                 // }
             }
 
@@ -70,7 +70,8 @@ TEST_SUITE("UDP")
             // ----- test setup -----
             // Begin listening for a packet
             std::thread receiver(
-                [port, msg, ip]()
+                // TODO add thread safety to these captured variables? currently captured by value
+                [dst_port, msg, dst_ip]()
                 {
                     // Listen for sent packet
                     constexpr size_t RX_DATA_LEN = 255;
@@ -81,13 +82,13 @@ TEST_SUITE("UDP")
                     socklen_t sender_info_len = sizeof(sender_info);
 
                     // Blocking reception call
-                    auto bytes_recvd = UdpBroker::recv(port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
+                    auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
 
                     // Check expected no. of bytes received
                     CHECK(bytes_recvd == std::size(msg));
 
                     // Check sender is as expected
-                    CHECK(UdpBroker::decodeIp(&sender_info) == std::string(ip));
+                    CHECK(UdpBroker::decodeIp(&sender_info) == std::string(dst_ip));
 
                     // Check the packets contents match (only compare the received bytes, not entire array)
                     auto received_msg = std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd);
@@ -99,7 +100,7 @@ TEST_SUITE("UDP")
             std::this_thread::sleep_for(1s);
 
             // Send the packet
-            auto bytes_sent = UdpBroker::send(ip, port, (const uint8_t*)msg.data(), std::size(msg));
+            auto bytes_sent = UdpBroker::send(dst_ip, dst_port, (const uint8_t*)msg.data(), std::size(msg));
 
             // Complete receiver task
             receiver.join();
