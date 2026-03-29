@@ -212,8 +212,15 @@ TEST_SUITE("UDP")
                     auto min_expected_time_to_rx = delay - 1s;
                     auto max_expected_time_to_rx = delay + 1s;
 
-                    // TODO lol
-                    // CAPTURE(time_to_rx(std::format("{:%T}", time_to_rx)));
+                    // NOTE: Use std::format in C++20 and above
+                    auto fmt_as_s = [](auto t)
+                    {
+                        return duration<double, std::milli>(duration_cast<microseconds>(t)).count();
+                    };
+
+                    INFO("took ",        fmt_as_s(time_to_rx), " ms");
+                    INFO("allowed max ", fmt_as_s(max_expected_time_to_rx), " ms");
+                    INFO("allowed min ", fmt_as_s(min_expected_time_to_rx), " ms");
                     CHECK(time_to_rx > min_expected_time_to_rx);
                     CHECK(time_to_rx < max_expected_time_to_rx);
                 }
