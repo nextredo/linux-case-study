@@ -291,9 +291,6 @@ TEST_SUITE("UDP")
                     // WARN: API states we must only be able to delay for an integer number of seconds
                     auto rx_timeout = interval_count * interval + 1s;
 
-                    // TODO all tolerancing of timing in this ENTIRE UNIT TEST FILE should
-                    // be proportional to its input (e.g. +5% tolerance)
-
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
                     socklen_t sender_info_len = sizeof(sender_info);

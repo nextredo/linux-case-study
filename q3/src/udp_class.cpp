@@ -10,7 +10,6 @@ UdpBroker::~UdpBroker()
 
     for (auto& thread : _workers)
     {
-        // TODO what to do if it's not joinable?
         if (thread.joinable())
             thread.join();
     }
@@ -22,7 +21,6 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
     auto af = sa->ss_family;
     void* ip = nullptr;
 
-    // TODO refactor decode and encode ip to share the pointer casting stuff
     switch (af)
     {
         case AF_INET:
@@ -60,9 +58,10 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len,
     struct addrinfo hints {};
     struct addrinfo* result = nullptr;
 
-    // TODO make this selectable on call (enum class)
     // TODO combine with send() setup
-    // Alternatively, can spawn an IPv6 server to listen for all
+        // move getaddrinfo and socket creation into a common area
+
+    // Alternatively, can spawn an IPv6 socket to listen for all
     // incoming connections and receive IPv4 traffic in mapped address format
     hints.ai_family   = ipVer;   // Use any address family (IPv4 or IPv6 here)
     hints.ai_socktype = SOCK_DGRAM;  // Only return datagram type sockets
