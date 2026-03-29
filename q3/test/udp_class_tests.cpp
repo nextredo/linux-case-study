@@ -15,60 +15,6 @@ using namespace std::chrono_literals;
 namespace
 {
 
-std::string decode_ip(struct sockaddr_storage* sa)
-{
-    std::string str;
-    auto af = sa->ss_family;
-    void* ip = nullptr;
-
-    // TODO refactor decode and encode ip to share the pointer casting stuff
-    switch (af)
-    {
-        case AF_INET:
-            str.resize(INET_ADDRSTRLEN);
-            ip = &((struct sockaddr_in*)sa)->sin_addr;
-            break;
-
-        case AF_INET6:
-            str.resize(INET6_ADDRSTRLEN);
-            ip = &((struct sockaddr_in6*)sa)->sin6_addr;
-            break;
-
-        default:
-            break;
-    };
-
-    inet_ntop(af, ip, str.data(), str.size());
-
-    // Truncate string object to length of null-terminated contents
-    str.resize(std::strlen(str.c_str()));
-    return str;
-}
-
-bool encode_ip(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData)
-{
-    int ret = -1;
-    void* ip_output = nullptr;
-
-    switch (ipVer)
-    {
-        case AF_INET:
-            ip_output = &((struct sockaddr_in*)ipData)->sin_addr;
-            break;
-
-        case AF_INET6:
-            ip_output = &((struct sockaddr_in6*)ipData)->sin6_addr;
-            break;
-
-        default:
-            FAIL(true);
-            break;
-    };
-
-    ret = inet_pton(ipVer, ip, ip_output);
-    return (ret == 1);
-}
-
 }
 
 TEST_SUITE("UDP")
@@ -89,7 +35,7 @@ TEST_SUITE("UDP")
 
         sa_family_t ip_ver = AF_INET;
         struct sockaddr_storage dst_ip {};
-        encode_ip(ip_ver, ip, &dst_ip);
+        UdpBroker::encodeIp(ip_ver, ip, &dst_ip);
 
         SUBCASE("sendImmediate")
         {
@@ -123,9 +69,9 @@ TEST_SUITE("UDP")
             //     SUBCASE(PORTS[1]) port = PORTS[1];
             // }
 
-            // --- test setup ---
+            // ----- test setup -----
             // Setup the sockaddr object
-            encode_ip(ip_ver, ip, &dst_ip);
+            UdpBroker::encodeIp(ip_ver, ip, &dst_ip);
 
             // Begin listening for a packet
             std::thread receiver(
@@ -146,7 +92,7 @@ TEST_SUITE("UDP")
                     CHECK(bytes_recvd == std::size(msg));
 
                     // Check sender is as expected
-                    CHECK(decode_ip(&sender_info) == std::string(ip));
+                    CHECK(UdpBroker::decodeIp(&sender_info) == std::string(ip));
 
                     // Check the packets contents match (only compare the received bytes, not entire array)
                     auto received_msg = std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd);
@@ -168,15 +114,6 @@ TEST_SUITE("UDP")
             // longer than the allowed max UDP pkt length.
             // >0 should be sufficient
             CHECK(bytes_sent == std::size(msg));
-
-            // TODO
-            // Check reception
-            // CHECK(broker.bytesReceived() == msg.size());
-            // CHECK(broker.recv() == msg);
-
-
-            // TODO check pkt actually received
-                // wireshark, or via C
         }
 
         SUBCASE("sendDelay")

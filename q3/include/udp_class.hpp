@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cerrno>
+#include <cstring>
 
-#include <atomic>
 #include <vector>
 #include <string>
 
@@ -23,22 +23,18 @@
 // TODO errno usage
 // TODO debug function to print dest ip (inet_ntop INET_ADDRSTRLEN)
 
-struct udp_packet_t
-{
-    static constexpr size_t DATA_LEN = 255;
-
-    uint8_t _data[DATA_LEN];
-    struct sockaddr_storage _senderAddr;
-    socklen_t _senderAddrLen;
-};
-
-
 class UdpBroker
 {
 private:
 
 public:
+    static std::string decodeIp(struct sockaddr_storage* sa);
+
+    static bool encodeIp(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData);
+
     /// @brief Sends a UDP packet
+    /// @return Number of bytes sent. Can be less than the input number
+    /// if, for example, information is to be split across multiple packets
     static ssize_t send(const struct sockaddr_storage* addr, const char* port, const uint8_t* data, const size_t len);
 
     /// @brief Receives a UDP packet
@@ -47,6 +43,7 @@ public:
     /// @param      len            Length of the data buffer
     /// @param[out] senderAddr     Info about the sender
     /// @param[out] senderAddrLen  Length of the received sender info
+    /// @return Number of bytes received
     static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen);
 
     /// @brief Sends a UDP packet instantly

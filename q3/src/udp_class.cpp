@@ -1,5 +1,59 @@
 #include "udp_class.hpp"
 
+std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
+{
+    std::string str;
+    auto af = sa->ss_family;
+    void* ip = nullptr;
+
+    // TODO refactor decode and encode ip to share the pointer casting stuff
+    switch (af)
+    {
+        case AF_INET:
+            str.resize(INET_ADDRSTRLEN);
+            ip = &((struct sockaddr_in*)sa)->sin_addr;
+            break;
+
+        case AF_INET6:
+            str.resize(INET6_ADDRSTRLEN);
+            ip = &((struct sockaddr_in6*)sa)->sin6_addr;
+            break;
+
+        default:
+            break;
+    };
+
+    inet_ntop(af, ip, str.data(), str.size());
+
+    // Truncate string object to length of null-terminated contents
+    str.resize(std::strlen(str.c_str()));
+    return str;
+}
+
+bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData)
+{
+    int ret = -1;
+    void* ip_output = nullptr;
+
+    switch (ipVer)
+    {
+        case AF_INET:
+            ip_output = &((struct sockaddr_in*)ipData)->sin_addr;
+            break;
+
+        case AF_INET6:
+            ip_output = &((struct sockaddr_in6*)ipData)->sin6_addr;
+            break;
+
+        default:
+            break;
+    };
+
+    ret = inet_pton(ipVer, ip, ip_output);
+    return (ret == 1);
+}
+
+
 ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen)
 {
     // Init struct to default values (brace --> value initialisation)
