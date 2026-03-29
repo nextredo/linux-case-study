@@ -46,13 +46,13 @@ TEST_SUITE("UDP")
                 SUBCASE("IPv4")
                 {
                     SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
-                    SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
+                    // SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
                 }
-                // SUBCASE("IPv6")
-                // {
-                //     SUBCASE(IPV6_DSTS[0]) ip = IPV6_DSTS[0];
-                //     SUBCASE(IPV6_DSTS[1]) ip = IPV6_DSTS[1];
-                // }
+                SUBCASE("IPv6")
+                {
+                    SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
+                    // SUBCASE(IPV6_DSTS[1]) dst_ip = IPV6_DSTS[1];
+                }
             }
 
             // SUBCASE("ports")
@@ -84,11 +84,12 @@ TEST_SUITE("UDP")
                     // Blocking reception call
                     auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
 
-                    // Check expected no. of bytes received
-                    CHECK(bytes_recvd == std::size(msg));
-
                     // Check sender is as expected
                     CHECK(UdpBroker::decodeIp(&sender_info) == std::string(dst_ip));
+
+                    // Check expected no. of bytes received
+                    // Require as there's no point checking the msg contents if the length doesn't match
+                    REQUIRE(bytes_recvd == std::size(msg));
 
                     // Check the packets contents match (only compare the received bytes, not entire array)
                     auto received_msg = std::string(std::begin(rx_data), std::begin(rx_data) + bytes_recvd);
