@@ -190,6 +190,10 @@ cleanup:
 bool UdpBroker::sendDelayed(const char* ip, const char* port,
         const uint8_t* data, const size_t len, std::chrono::seconds delay)
 {
+    // NOTE: Stretch goal
+    // Allow for any std::chrono::duration amount of delay
+    // Be it us, ms, mins etc.
+
     // Ensure number is constrained
     // Alternatively, std::clamp() can be used
     if ((delay < 1s) || (delay > 255s))

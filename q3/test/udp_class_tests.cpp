@@ -11,6 +11,8 @@
 #include <sys/socket.h>
 
 using namespace std::chrono_literals;
+using namespace std::chrono;
+
 
 // TODO instructions for pulling this repo
     // ensure submodule is pulled too & updated for q3 to work
@@ -32,11 +34,28 @@ constexpr size_t RX_DATA_LEN = 255;
 template<typename T>
 auto fmt_as_s(T time)
 {
-    using namespace std::chrono;
-
     // NOTE: Use std::format in C++20 and above
     return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
 };
+
+template<typename T>
+void check_tolerance(seconds expected, T elapsed, int perc = 15)
+{
+    auto tol = [](seconds time, int perc)
+    {
+        auto time_ms = duration_cast<milliseconds>(time);
+        return time_ms + ((time_ms / 100) * perc);
+    };
+
+    auto max = tol(expected, -perc);
+    auto min = tol(expected, perc);
+
+    INFO("took ",        fmt_as_s(elapsed), " ms");
+    INFO("allowed max ", fmt_as_s(max), " ms");
+    INFO("allowed min ", fmt_as_s(min), " ms");
+    CHECK(elapsed > max);
+    CHECK(elapsed < min);
+}
 
 }
 
@@ -140,8 +159,6 @@ TEST_SUITE("UDP")
 
     TEST_CASE("sendDelayed")
     {
-        using namespace std::chrono;
-
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
         const char* dst_ip         = "127.0.0.1";
         const char* dst_port       = "56789";
@@ -177,11 +194,8 @@ TEST_SUITE("UDP")
             rx_fn = [dst_port, msg, dst_ip, ip_ver, delay]()
                 {
                     // Wait for a little longer than the expected packet send delay
-                    auto rx_timeout = delay + 2s;
-
-                    // TODO revamp these. Should be percentage based, and more intuitively used in code
-                    auto min_expected_time_to_rx = delay - 1s;
-                    auto max_expected_time_to_rx = delay + 1s;
+                    // WARN: API states we must only be able to delay for an integer number of seconds
+                    auto rx_timeout = delay + 1s;
 
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
@@ -203,11 +217,7 @@ TEST_SUITE("UDP")
 
                     // Perform time checks & logging
                     auto time_to_rx = end - start;
-                    INFO("took ",        fmt_as_s(time_to_rx), " ms");
-                    INFO("allowed max ", fmt_as_s(max_expected_time_to_rx), " ms");
-                    INFO("allowed min ", fmt_as_s(min_expected_time_to_rx), " ms");
-                    CHECK(time_to_rx > min_expected_time_to_rx);
-                    CHECK(time_to_rx < max_expected_time_to_rx);
+                    check_tolerance(delay, time_to_rx);
                 };
         }
 
@@ -231,8 +241,6 @@ TEST_SUITE("UDP")
 
     TEST_CASE("sendPeriodic")
     {
-        using namespace std::chrono;
-
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
         const char* dst_ip         = "127.0.0.1";
         const char* dst_port       = "57474";
@@ -280,14 +288,11 @@ TEST_SUITE("UDP")
                 {
                     // Wait for a little longer than however many
                     // intervals we're testing (plus tolerance)
-                    auto rx_timeout = interval_count * interval + 2s;
+                    // WARN: API states we must only be able to delay for an integer number of seconds
+                    auto rx_timeout = interval_count * interval + 1s;
 
                     // TODO all tolerancing of timing in this ENTIRE UNIT TEST FILE should
                     // be proportional to its input (e.g. +5% tolerance)
-
-                    // TODO revamp these
-                    auto max_interval_time = interval + 0.5s;
-                    auto min_interval_time = interval - 0.5s;
 
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
@@ -309,11 +314,7 @@ TEST_SUITE("UDP")
                         // Perform time checks & logging
                         // Ensure each packet received approximately on-time
                         auto time_to_rx = end - start;
-                        INFO("took ",        fmt_as_s(time_to_rx), " ms");
-                        INFO("allowed max ", fmt_as_s(max_interval_time), " ms");
-                        INFO("allowed min ", fmt_as_s(min_interval_time), " ms");
-                        CHECK(time_to_rx > min_interval_time);
-                        CHECK(time_to_rx < max_interval_time);
+                        check_tolerance(interval, time_to_rx);
                     }
                 };
         }
