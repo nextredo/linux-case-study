@@ -230,17 +230,62 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
         // Important in multithreaded contexts
         [this, ip_mt, port_mt, data_mt, delay]()
             {
+                // TODO this functionality would be much nicer as a class
                 // Wait using a condition variable, so when the
                 // main object is destroyed, we end the thread
                 std::unique_lock<std::mutex> lock(this->_workerMutex);
                 this->_workerCondVar.wait_for(lock, delay);
-                // std::this_thread::sleep_for(delay);
 
                 // If we're still allowed to execute
+                // As cond var may have disturbed our slumber
+                // to stop & get joined
                 if (_workerExecFlag.load())
                 {
                     UdpBroker::send(ip_mt.data(), port_mt.data(),
                             data_mt.data(), data_mt.size());
+                }
+            }
+    );
+
+    return true;
+}
+
+
+// TODO this shares VAST amounts of code with sendDelayed
+// TODO combine the two to de-duplicate
+bool UdpBroker::sendPeriodic(const char* ip, const char* port,
+        const uint8_t* data, const size_t len, std::chrono::seconds interval)
+{
+    // Ensure number is constrained
+    // Alternatively, std::clamp() can be used
+    if ((interval < 1s) || (interval > 255s))
+        return false;
+
+    std::string ip_mt   = ip;
+    std::string port_mt = port;
+    std::vector<uint8_t> data_mt {data, data + len};
+
+    _workers.emplace_back(
+        // TODO bake in cond var waiting into the worker thread class
+        // TODO possibly replace with timed_mutex and try_lock_for
+
+        // Capture by value for ownership
+        // Important in multithreaded contexts
+        [this, ip_mt, port_mt, data_mt, interval]()
+            {
+                std::unique_lock<std::mutex> lock(this->_workerMutex);
+
+                // Continue while workers are alive
+                while (_workerExecFlag.load())
+                {
+                    this->_workerCondVar.wait_for(lock, interval);
+
+                    // If we're still allowed to execute
+                    if (_workerExecFlag.load())
+                    {
+                        UdpBroker::send(ip_mt.data(), port_mt.data(),
+                                data_mt.data(), data_mt.size());
+                    }
                 }
             }
     );

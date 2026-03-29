@@ -14,39 +14,13 @@
 
 using namespace std::chrono_literals;
 
+// TODO tests for multiple senders at once
+
 namespace
 {
 
 // Maximum size to use for packet reception calls
 constexpr size_t RX_DATA_LEN = 255;
-
-// TODO remove, duplicates 1st lambda
-// void expect_packet(UdpBroker::ip_ver_e ip_ver, const char* dst_ip,
-//         const char* dst_port, const char *msg)
-// {
-//     // Listen for sent packet
-//     constexpr size_t RX_DATA_LEN = 255;
-//
-//     // TODO std vector instead
-//     uint8_t rx_data[RX_DATA_LEN] {};
-//     struct sockaddr_storage sender_info {};
-//     socklen_t sender_info_len = sizeof(sender_info);
-//
-//     // Blocking reception call
-//     auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len, ip_ver);
-//
-//     // Capture sender and destination IPs
-//     CAPTURE(UdpBroker::decodeIp(&sender_info));
-//     CAPTURE(dst_ip);
-//     CAPTURE(dst_port);
-//
-//     // Check expected no. of bytes received
-//     // Require as there's no point checking the msg contents if the length doesn't match
-//     REQUIRE(bytes_recvd == std::strlen(msg));
-//
-//     // Check the packets contents match (only compare the received bytes, not entire array)
-//     CHECK((const char*)rx_data == msg);
-// }
 
 }
 
@@ -61,48 +35,40 @@ TEST_SUITE("UDP")
 
     TEST_CASE("send")
     {
-        // Set test permutations
-        constexpr const char* IPV4_DSTS[] = {"127.0.0.1",    "127.0.0.2"};
-        constexpr const char* IPV6_DSTS[] = {"::1",          "::2"};
-        constexpr const char* DST_PORTS[] = {"12345",        "55555"};
-        constexpr const char* MSGS[]      = {"hello world!", "hi earth!"};
-
         // Set default test variables
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
-        const char* dst_ip         = IPV4_DSTS[0];
-        const char* dst_port       = DST_PORTS[0];
-        const char* msg            = MSGS[0];
+        const char* dst_ip         = "127.0.0.1";
+        const char* dst_port       = "12345";
+        const char* msg            = "Hello World!";
 
 
-        // SUBCASE("addresses")
-        // {
-        //     SUBCASE("IPv4")
-        //     {
-        //         ip_ver = UdpBroker::ip_ver_e::IPV4;
-        //         SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
-        //         SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
-        //     }
-        //     SUBCASE("IPv6")
-        //     {
-        //         ip_ver = UdpBroker::ip_ver_e::IPV6;
-        //
-        //         // Only 1 subcase, IPv6 only has 1 loopback address
-        //         // In contrast, IPv4 has all addrs in 127.0.0.0/8
-        //         SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
-        //     }
-        // }
-        //
-        // SUBCASE("ports")
-        // {
-        //     SUBCASE(DST_PORTS[0]) dst_port = DST_PORTS[0];
-        //     SUBCASE(DST_PORTS[1]) dst_port = DST_PORTS[1];
-        // }
-        //
-        // SUBCASE("msgs")
-        // {
-        //     SUBCASE(MSGS[0]) msg = MSGS[0];
-        //     SUBCASE(MSGS[1]) msg = MSGS[1];
-        // }
+        SUBCASE("addresses")
+        {
+            SUBCASE("IPv4")
+            {
+                ip_ver = UdpBroker::ip_ver_e::IPV4;
+                SUBCASE("alt_loopback") dst_ip = "127.0.0.2";
+            }
+            SUBCASE("IPv6")
+            {
+                ip_ver = UdpBroker::ip_ver_e::IPV6;
+
+                // Only 1 subcase, IPv6 only has 1 loopback address
+                // In contrast, IPv4 has all addrs in 127.0.0.0/8
+                SUBCASE("loopback") dst_ip = "::1";
+            }
+        }
+
+        SUBCASE("ports")
+        {
+            SUBCASE("ephemeral_1") dst_port = "12345";
+            SUBCASE("ephemeral_2") dst_port = "55555";
+        }
+
+        SUBCASE("msgs")
+        {
+            SUBCASE("alt_msg") msg = "Hi Earth!!!";
+        }
 
         // Reception will not work if packet is fragmented
         REQUIRE(std::strlen(msg) + 1 < RX_DATA_LEN);
@@ -165,7 +131,7 @@ TEST_SUITE("UDP")
         const char* dst_port       = "56789";
         const char* msg            = "delayed send pkt contents";
 
-        std::chrono::seconds delay = 0s;
+        seconds delay = 0s;
 
         UdpBroker sender;
         bool      expect_success = false;
@@ -233,6 +199,7 @@ TEST_SUITE("UDP")
                 };
         }
 
+        // -------------------------- Test setup ---------------------------
         // Expect a packet to be received
         auto rx_future = std::async(std::launch::async, rx_fn);
 
@@ -256,5 +223,28 @@ TEST_SUITE("UDP")
 
     TEST_CASE("sendPeriodic")
     {
+        using namespace std::chrono;
+
+        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
+        const char* dst_ip         = "127.0.0.1";
+        const char* dst_port       = "57474";
+        const char* msg            = "periodic send pkt contents";
+
+        seconds interval = 0s;
+
+        UdpBroker sender;
+        bool      expect_success = false;
+
+        SUBCASE("1_packet")
+        {
+
+        }
+
+        SUBCASE("3_packets")
+        {
+
+        }
+
+        // -------------------------- Test setup ---------------------------
     }
 }

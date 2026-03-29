@@ -95,13 +95,15 @@ public:
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelayed(const char* ip, const char* port,
-        const uint8_t* data, const size_t len, std::chrono::seconds delay);
+        const uint8_t* data, const size_t len,
+        std::chrono::seconds delay);
+
+    bool sendPeriodic(const char* ip, const char* port,
+        const uint8_t* data, const size_t len,
+        std::chrono::seconds interval);
 
     /// @brief Sends a UDP packet periodically
     bool sendPeriodic();
-
-    static std::string ipNetworkToPresentation(struct addrinfo* addrInfo);
-    static void ipPresentationToNetwork();
 };
 
 
