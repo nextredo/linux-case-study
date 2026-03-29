@@ -17,6 +17,33 @@ using namespace std::chrono_literals;
 namespace
 {
 
+void expect_packet(UdpBroker::ip_ver_e ip_ver, const char* dst_ip,
+        const char* dst_port, const char *msg)
+{
+    // Listen for sent packet
+    constexpr size_t RX_DATA_LEN = 255;
+
+    // TODO std vector instead
+    uint8_t rx_data[RX_DATA_LEN] {};
+    struct sockaddr_storage sender_info {};
+    socklen_t sender_info_len = sizeof(sender_info);
+
+    // Blocking reception call
+    auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len, ip_ver);
+
+    // Capture sender and destination IPs
+    CAPTURE(UdpBroker::decodeIp(&sender_info));
+    CAPTURE(dst_ip);
+    CAPTURE(dst_port);
+
+    // Check expected no. of bytes received
+    // Require as there's no point checking the msg contents if the length doesn't match
+    REQUIRE(bytes_recvd == std::strlen(msg));
+
+    // Check the packets contents match (only compare the received bytes, not entire array)
+    CHECK((const char*)rx_data == msg);
+}
+
 }
 
 TEST_SUITE("UDP")
@@ -74,37 +101,12 @@ TEST_SUITE("UDP")
         // }
 
         // -------------------------- Test setup ---------------------------
-        // Begin listening for a packet
+        // Begin listening for (receiving/rx-ing) a packet
         // Using std::async over std::thread as it captures and stores any
         // exceptions thrown in the worker thread, re-throwing them in the main thread
         // once .get() is called on the corresponding std::future
-        auto receiver_future = std::async(std::launch::async,
-            [dst_port, msg, dst_ip, ip_ver]()
-            {
-                // Listen for sent packet
-                constexpr size_t RX_DATA_LEN = 255;
-
-                // TODO std vector instead
-                uint8_t rx_data[RX_DATA_LEN] {};
-                struct sockaddr_storage sender_info {};
-                socklen_t sender_info_len = sizeof(sender_info);
-
-                // Blocking reception call
-                auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len, ip_ver);
-
-                // Capture sender and destination IPs
-                CAPTURE(UdpBroker::decodeIp(&sender_info));
-                CAPTURE(dst_ip);
-                CAPTURE(dst_port);
-
-                // Check expected no. of bytes received
-                // Require as there's no point checking the msg contents if the length doesn't match
-                REQUIRE(bytes_recvd == std::strlen(msg));
-
-                // Check the packets contents match (only compare the received bytes, not entire array)
-                CHECK((const char*)rx_data == msg);
-            }
-        );
+        auto rx_future = std::async(std::launch::async,
+                expect_packet, ip_ver, dst_ip, dst_port, msg);
 
         // Wait for reception thread to begin
         std::this_thread::sleep_for(1s);
@@ -116,7 +118,7 @@ TEST_SUITE("UDP")
 
         // Complete receiver task
         // get() rethrows any captured exception from the thread
-        receiver_future.get();
+        rx_future.get();
 
         // Check msg length matches
         // WARN: This assumption falls apart for pkts
@@ -154,12 +156,22 @@ TEST_SUITE("UDP")
             // SUBCASE("after_255s") delay = 255s;
         }
 
-        // TODO add listener check
-            // should wait on reception of the packet for delay + a lil bit
+        // Expect a packet to be received
+        // auto rx_future = std::async(std::launch::async,
+        //         expect_packet, ip_ver, dst_ip, dst_port, msg);
+
+        // Wait for reception thread to begin
+        std::this_thread::sleep_for(1s);
 
         // Run the test
         bool queued_send = sender.sendDelayed(dst_ip, dst_port,
                 (const uint8_t*)msg.data(), msg.size(), delay);
+
+        // Wait for queued send to complete
+        std::this_thread::sleep_for(delay);
+
+        // Complete receiver task
+        // rx_future.get();
 
         // Check function returned as expected
         CHECK(queued_send == expect_success);
