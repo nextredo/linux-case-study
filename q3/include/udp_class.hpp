@@ -23,6 +23,18 @@
 // TODO errno usage
 // TODO debug function to print dest ip (inet_ntop INET_ADDRSTRLEN)
 
+class UdpSender
+{
+private:
+public:
+};
+
+class UdpReceiver
+{
+private:
+public:
+};
+
 class UdpBroker
 {
 private:
@@ -35,7 +47,7 @@ public:
     /// @brief Sends a UDP packet
     /// @return Number of bytes sent. Can be less than the input number
     /// if, for example, information is to be split across multiple packets
-    static ssize_t send(const struct sockaddr_storage* addr, const char* port, const uint8_t* data, const size_t len);
+    static ssize_t send(const char* ip, const char* port, const uint8_t* data, const size_t len);
 
     /// @brief Receives a UDP packet
     /// @param      port           Host port to listen on

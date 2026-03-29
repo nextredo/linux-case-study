@@ -53,6 +53,11 @@ bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockadd
     return (ret == 1);
 }
 
+// TODO allow socket re-binding without errors
+// int yes=1;
+// char yes='1'; // Solaris people use this
+// lose the pesky "Address already in use" error message
+// setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
 ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen)
 {
@@ -61,10 +66,11 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     struct addrinfo* result = nullptr;
 
     // TODO make this selectable on call (enum class)
-    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
-    hints.ai_socktype = SOCK_DGRAM; // UDP
-    hints.ai_flags = AI_PASSIVE; // Automatically fill in my IP
-    hints.ai_protocol = 0; // Any protocol
+    // TODO combine with send() setup
+    hints.ai_family   = AF_UNSPEC;   // Use any address family (IPv4 or IPv6 here)
+    hints.ai_socktype = SOCK_DGRAM;  // Only return datagram type sockets
+    hints.ai_flags    = AI_PASSIVE;  // Autofill my IP socket (used for incoming connections)
+    hints.ai_protocol = IPPROTO_UDP; // Only return sockets for the UDP protocol
 
     int socket_fd       = 0;
     int gai_ret         = 0;
@@ -136,9 +142,9 @@ ssize_t UdpBroker::send(const char* ip, const char* port, const uint8_t* data, c
     struct addrinfo* server_info = nullptr;
 
     // TODO make this selectable on call
-    hints.ai_family = AF_UNSPEC; // Use the address family from the provided address
-    hints.ai_socktype = SOCK_DGRAM; // UDP
-    // hints.ai_protocol = 0; // Any protocol
+    hints.ai_family   = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
 
     int socket_fd      = 0;
     int gai_ret        = 0;
