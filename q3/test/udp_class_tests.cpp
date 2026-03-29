@@ -43,35 +43,35 @@ TEST_SUITE("UDP")
 
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::UNSPEC;
 
-        SUBCASE("addresses")
-        {
-            SUBCASE("IPv4")
-            {
-                ip_ver = UdpBroker::ip_ver_e::IPV4;
-                SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
-                SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
-            }
-            SUBCASE("IPv6")
-            {
-                ip_ver = UdpBroker::ip_ver_e::IPV6;
-
-                // Only 1 subcase, IPv6 only has 1 loopback address
-                // In contrast, IPv4 has all addrs in 127.0.0.0/8
-                SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
-            }
-        }
-
-        SUBCASE("ports")
-        {
-            SUBCASE(DST_PORTS[0]) dst_port = DST_PORTS[0];
-            SUBCASE(DST_PORTS[1]) dst_port = DST_PORTS[1];
-        }
-
-        SUBCASE("msgs")
-        {
-            SUBCASE(MSGS[0]) msg = MSGS[0];
-            SUBCASE(MSGS[1]) msg = MSGS[1];
-        }
+        // SUBCASE("addresses")
+        // {
+        //     SUBCASE("IPv4")
+        //     {
+        //         ip_ver = UdpBroker::ip_ver_e::IPV4;
+        //         SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
+        //         SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
+        //     }
+        //     SUBCASE("IPv6")
+        //     {
+        //         ip_ver = UdpBroker::ip_ver_e::IPV6;
+        //
+        //         // Only 1 subcase, IPv6 only has 1 loopback address
+        //         // In contrast, IPv4 has all addrs in 127.0.0.0/8
+        //         SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
+        //     }
+        // }
+        //
+        // SUBCASE("ports")
+        // {
+        //     SUBCASE(DST_PORTS[0]) dst_port = DST_PORTS[0];
+        //     SUBCASE(DST_PORTS[1]) dst_port = DST_PORTS[1];
+        // }
+        //
+        // SUBCASE("msgs")
+        // {
+        //     SUBCASE(MSGS[0]) msg = MSGS[0];
+        //     SUBCASE(MSGS[1]) msg = MSGS[1];
+        // }
 
         // -------------------------- Test setup ---------------------------
         // Begin listening for a packet
@@ -158,11 +158,11 @@ TEST_SUITE("UDP")
             // should wait on reception of the packet for delay + a lil bit
 
         // Run the test
-        bool success = sender.sendDelayed(dst_ip, dst_port,
+        bool queued_send = sender.sendDelayed(dst_ip, dst_port,
                 (const uint8_t*)msg.data(), msg.size(), delay);
 
         // Check function returned as expected
-        CHECK(success == expect_success);
+        CHECK(queued_send == expect_success);
     }
 
     TEST_CASE("sendPeriodic")

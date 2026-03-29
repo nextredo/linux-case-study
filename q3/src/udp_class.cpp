@@ -1,5 +1,21 @@
 #include "udp_class.hpp"
 
+UdpBroker::~UdpBroker()
+{
+    // Tell workers they should stop working
+    _workerExecFlag = false;
+
+    // Wake all workers in condition-var based waiting operations
+    _workerCondVar.notify_all();
+
+    for (auto& thread : _workers)
+    {
+        // TODO what to do if it's not joinable?
+        if (thread.joinable())
+            thread.join();
+    }
+}
+
 std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 {
     std::string str;
@@ -204,14 +220,26 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
     std::string port_mt = port;
     std::vector<uint8_t> data_mt {data, data + len};
 
-    _threads.emplace_back(
+    _workers.emplace_back(
+        // TODO bake in cond var waiting into the worker thread class
+        // TODO possibly replace with timed_mutex and try_lock_for
+
         // Capture by value for ownership
         // Important in multithreaded contexts
-        [ip_mt, port_mt, data_mt, delay]()
+        [this, ip_mt, port_mt, data_mt, delay]()
             {
-                std::this_thread::sleep_for(delay);
-                UdpBroker::send(ip_mt.data(), port_mt.data(),
-                        data_mt.data(), data_mt.size());
+                // Wait using a condition variable, so when the
+                // main object is destroyed, we end the thread
+                std::unique_lock<std::mutex> lock(this->_workerMutex);
+                this->_workerCondVar.wait_for(lock, delay);
+                // std::this_thread::sleep_for(delay);
+
+                // If we're still allowed to execute
+                if (_workerExecFlag.load())
+                {
+                    UdpBroker::send(ip_mt.data(), port_mt.data(),
+                            data_mt.data(), data_mt.size());
+                }
             }
     );
 

@@ -2,6 +2,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include <atomic>
+#include <condition_variable>
 #include <vector>
 #include <thread>
 #include <chrono>
@@ -42,7 +44,13 @@ public:
 class UdpBroker
 {
 private:
-    std::vector<std::thread> _threads;
+    // std::atomic<bool> _workerExecFlag = true;
+
+    // TODO bundle into an `Interruptable` class
+    std::atomic<bool>        _workerExecFlag = true;
+    std::mutex               _workerMutex;
+    std::condition_variable  _workerCondVar;
+    std::vector<std::thread> _workers;
 
 public:
     enum ip_ver_e : int
@@ -51,6 +59,12 @@ public:
         IPV4   = AF_INET,
         IPV6   = AF_INET6,
     };
+
+    // Constructor
+    // UdpBroker();
+
+    // Destructor
+    ~UdpBroker();
 
     static std::string decodeIp(struct sockaddr_storage* sa);
 
