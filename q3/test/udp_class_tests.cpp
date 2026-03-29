@@ -158,6 +158,8 @@ TEST_SUITE("UDP")
 
     TEST_CASE("sendDelayed")
     {
+        using namespace std::chrono;
+
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
         const char* dst_ip         = "127.0.0.1";
         const char* dst_port       = "56789";
@@ -168,33 +170,34 @@ TEST_SUITE("UDP")
         UdpBroker sender;
         bool      expect_success = false;
 
-        // SUBCASE("out_of_range")
-        // {
-        //     expect_success = false;
-        //     SUBCASE("after_0s")   delay = 0s;
-        //     // TODO reintroduce
-        //     // SUBCASE("after_256s") delay = 256s;
-        // }
+        std::function<void()> rx_fn;
+
+        SUBCASE("out_of_range")
+        {
+            expect_success = false;
+            SUBCASE("after_0s") delay = 0s;
+            SUBCASE("after_256s") delay = 256s;
+
+            // Expect it to fail, so we don't need to check returns
+            // For the paranoid, we could check that it doesn't send a packet even
+            // after the specified delay
+            rx_fn = []() {};
+        }
 
         SUBCASE("in_range")
         {
             expect_success = true;
-            SUBCASE("after_1s")   delay = 1s;
-            SUBCASE("after_2s")   delay = 2s;
-            SUBCASE("after_10s")  delay = 10s;
-            // TODO reintroduce
+            SUBCASE("after_1s") delay = 1s;
+            SUBCASE("after_2s") delay = 2s;
+            SUBCASE("after_5s") delay = 5s;
             // SUBCASE("after_255s") delay = 255s;
-        }
 
-        // Expect a packet to be received
-        // TODO add a packet timing check in here
-        auto rx_future = std::async(std::launch::async,
-                [dst_port, msg, dst_ip, ip_ver, delay]()
+            rx_fn = [dst_port, msg, dst_ip, ip_ver, delay]()
                 {
-                    using namespace std::chrono;
-
                     // Wait for a little longer than the expected packet send delay
-                    seconds rx_timeout = delay + 2s;
+                    auto rx_timeout = delay + 2s;
+                    auto min_expected_time_to_rx = delay - 1s;
+                    auto max_expected_time_to_rx = delay + 1s;
 
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
@@ -210,13 +213,9 @@ TEST_SUITE("UDP")
                             &sender_info, &sender_info_len, ip_ver, rx_timeout);
                     auto end = steady_clock::now();
 
+                    // Cease checking if no bytes received
                     REQUIRE(bytes_recvd == std::strlen(msg));
                     CHECK((const char*)rx_data == msg);
-
-                    // Name variables for ease of understanding in test output
-                    auto time_to_rx = end - start;
-                    auto min_expected_time_to_rx = delay - 1s;
-                    auto max_expected_time_to_rx = delay + 1s;
 
                     // NOTE: Use std::format in C++20 and above
                     auto fmt_as_s = [](auto t)
@@ -224,13 +223,18 @@ TEST_SUITE("UDP")
                         return duration<double, std::milli>(duration_cast<microseconds>(t)).count();
                     };
 
+                    // Perform time checks & logging
+                    auto time_to_rx = end - start;
                     INFO("took ",        fmt_as_s(time_to_rx), " ms");
                     INFO("allowed max ", fmt_as_s(max_expected_time_to_rx), " ms");
                     INFO("allowed min ", fmt_as_s(min_expected_time_to_rx), " ms");
                     CHECK(time_to_rx > min_expected_time_to_rx);
                     CHECK(time_to_rx < max_expected_time_to_rx);
-                }
-        );
+                };
+        }
+
+        // Expect a packet to be received
+        auto rx_future = std::async(std::launch::async, rx_fn);
 
         // Wait for reception thread to begin
         std::this_thread::sleep_for(100ms);
@@ -240,7 +244,8 @@ TEST_SUITE("UDP")
                 (const uint8_t*)msg, std::strlen(msg), delay);
 
         // Wait for queued send to complete
-        std::this_thread::sleep_for(delay);
+        if (expect_success)
+            std::this_thread::sleep_for(delay);
 
         // Complete receiver task
         rx_future.get();
