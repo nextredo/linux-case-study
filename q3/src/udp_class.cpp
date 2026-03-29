@@ -50,7 +50,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 // lose the pesky "Address already in use" error message
 // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
-ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len,
+ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
         const ip_ver_e ipVer, std::chrono::seconds timeout)
 {
@@ -132,7 +132,7 @@ cleanup:
 
 
 ssize_t UdpBroker::send(const char* ip, const char* port,
-        const uint8_t* data, const size_t len)
+        const void* data, const size_t len)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -187,7 +187,7 @@ cleanup:
 
 
 bool UdpBroker::sendDelayed(const char* ip, const char* port,
-        const uint8_t* data, const size_t len, std::chrono::seconds delay)
+        const void* data, const size_t len, std::chrono::seconds delay)
 {
     // NOTE: Stretch goal
     // Allow for any std::chrono::duration amount of delay
@@ -200,7 +200,9 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
 
     std::string ip_mt   = ip;
     std::string port_mt = port;
-    std::vector<uint8_t> data_mt {data, data + len};
+    std::vector<uint8_t> data_mt {
+            static_cast<const uint8_t*>(data),
+            static_cast<const uint8_t*>(data) + len};
 
     _workers.emplace_back(
         // TODO bake in cond var waiting into the worker thread class
@@ -234,7 +236,7 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
 // TODO this shares VAST amounts of code with sendDelayed
 // TODO combine the two to de-duplicate
 bool UdpBroker::sendPeriodic(const char* ip, const char* port,
-        const uint8_t* data, const size_t len, std::chrono::seconds interval)
+        const void* data, const size_t len, std::chrono::seconds interval)
 {
     // Ensure number is constrained
     // Alternatively, std::clamp() can be used
@@ -243,7 +245,9 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
 
     std::string ip_mt   = ip;
     std::string port_mt = port;
-    std::vector<uint8_t> data_mt {data, data + len};
+    std::vector<uint8_t> data_mt {
+            static_cast<const uint8_t*>(data),
+            static_cast<const uint8_t*>(data) + len};
 
     _workers.emplace_back(
         // TODO bake in cond var waiting into the worker thread class

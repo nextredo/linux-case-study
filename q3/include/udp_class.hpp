@@ -81,9 +81,8 @@ public:
     /// @param len  Length of the data buffer, in bytes
     /// @return Number of bytes sent
     static ssize_t send(const char* ip, const char* port,
-            const uint8_t* data, const size_t len);
+            const void* data, const size_t len);
 
-    // TODO change this and recv to accept void* bufs
     /// @brief Receives a UDP packet
     /// @param      port          Host port to listen on
     /// @param[out] data          Buffer to put received data in
@@ -92,19 +91,19 @@ public:
     /// @param[out] senderAddrLen Length of the received sender info
     /// @param      ip_ver_e      Which IP protocol to listen on
     /// @return Number of bytes received
-    static ssize_t recv(const char* port, uint8_t* data, const size_t len,
+    static ssize_t recv(const char* port, void* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
             const ip_ver_e ipVer = ip_ver_e::UNSPEC,
             std::chrono::seconds timeout = 3s);
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelayed(const char* ip, const char* port,
-        const uint8_t* data, const size_t len,
+        const void* data, const size_t len,
         std::chrono::seconds delay);
 
     /// @brief Sends a UDP packet periodically
     bool sendPeriodic(const char* ip, const char* port,
-        const uint8_t* data, const size_t len,
+        const void* data, const size_t len,
         std::chrono::seconds interval);
 };
 
