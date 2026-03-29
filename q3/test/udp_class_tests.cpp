@@ -32,12 +32,12 @@ TEST_SUITE("UDP")
         // Set test permutations
         constexpr const char* IPV4_DSTS[] = {"127.0.0.1",    "127.0.0.2"};
         constexpr const char* IPV6_DSTS[] = {"::1",          "::2"};
-        constexpr const char* PORTS[]     = {"12345",        "55555"};
+        constexpr const char* DST_PORTS[] = {"12345",        "55555"};
         constexpr const char* MSGS[]      = {"hello world!", "hi earth!"};
 
         // Set default test variables
         const char* dst_ip         = IPV4_DSTS[0];
-        const char* dst_port       = PORTS[0];
+        const char* dst_port       = DST_PORTS[0];
 
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::UNSPEC;
         std::string msg            = MSGS[0];
@@ -55,16 +55,18 @@ TEST_SUITE("UDP")
                 SUBCASE("IPv6")
                 {
                     ip_ver = UdpBroker::ip_ver_e::IPV6;
+
+                    // Only 1 subcase, IPv6 only has 1 loopback address
+                    // In contrast, IPv4 has all addrs in 127.0.0.0/8
                     SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
-                    SUBCASE(IPV6_DSTS[1]) dst_ip = IPV6_DSTS[1];
                 }
             }
 
-            // SUBCASE("ports")
-            // {
-            //     SUBCASE(PORTS[0]) port = PORTS[0];
-            //     SUBCASE(PORTS[1]) port = PORTS[1];
-            // }
+            SUBCASE("ports")
+            {
+                SUBCASE(DST_PORTS[0]) dst_port = DST_PORTS[0];
+                SUBCASE(DST_PORTS[1]) dst_port = DST_PORTS[1];
+            }
             //
             // SUBCASE("msgs")
             // {
@@ -94,6 +96,7 @@ TEST_SUITE("UDP")
                     // Capture sender and destination IPs
                     CAPTURE(UdpBroker::decodeIp(&sender_info));
                     CAPTURE(std::string(dst_ip));
+                    CAPTURE(std::string(dst_port));
 
                     // Check expected no. of bytes received
                     // Require as there's no point checking the msg contents if the length doesn't match
