@@ -3,9 +3,10 @@
 #include "udp_class.hpp"
 
 #include <chrono>
-#include <thread>
 #include <algorithm>
 #include <iterator>
+#include <thread>
+#include <future>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -55,7 +56,7 @@ TEST_SUITE("UDP")
                 {
                     ip_ver = UdpBroker::ip_ver_e::IPV6;
                     SUBCASE(IPV6_DSTS[0]) dst_ip = IPV6_DSTS[0];
-                    // SUBCASE(IPV6_DSTS[1]) dst_ip = IPV6_DSTS[1];
+                    SUBCASE(IPV6_DSTS[1]) dst_ip = IPV6_DSTS[1];
                 }
             }
 
@@ -71,10 +72,12 @@ TEST_SUITE("UDP")
             //     SUBCASE(MSGS[1]) msg = MSGS[1];
             // }
 
-            // ----- test setup -----
+            // -------------------------- Test setup ---------------------------
             // Begin listening for a packet
-            std::thread receiver(
-                // TODO add thread safety to these captured variables? currently captured by value
+            // Using std::async over std::thread as it captures and stores any
+            // exceptions thrown in the worker thread, re-throwing them in the main thread
+            // once .get() is called on the corresponding std::future
+            auto receiver_future = std::async(std::launch::async,
                 [dst_port, msg, dst_ip, ip_ver]()
                 {
                     // Listen for sent packet
@@ -109,7 +112,8 @@ TEST_SUITE("UDP")
             auto bytes_sent = UdpBroker::send(dst_ip, dst_port, (const uint8_t*)msg.data(), std::size(msg));
 
             // Complete receiver task
-            receiver.join();
+            // get() rethrows any captured exception from the thread
+            receiver_future.get();
 
             // Check msg length matches
             // WARN: This assumption falls apart for pkts
