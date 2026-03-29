@@ -77,7 +77,9 @@ bool UdpBroker::encodeIp(const char* ip, struct sockaddr_storage* ipData)
 // lose the pesky "Address already in use" error message
 // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
-ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen, const ip_ver_e ipVer)
+ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len,
+        struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
+        const ip_ver_e ipVer, std::chrono::seconds timeout)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -99,7 +101,7 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
     int listen_ret      = 0;
     ssize_t bytes_recvd = -1;
 
-    timeval sock_timeout = { .tv_sec = 3 };
+    timeval sock_timeout = { .tv_sec = timeout.count() };
 
     // TODO
     // int yes=1;

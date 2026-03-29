@@ -90,7 +90,8 @@ public:
     /// @return Number of bytes received
     static ssize_t recv(const char* port, uint8_t* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
-            const ip_ver_e ipVer = ip_ver_e::UNSPEC);
+            const ip_ver_e ipVer = ip_ver_e::UNSPEC,
+            std::chrono::seconds timeout = 3s);
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelayed(const char* ip, const char* port,

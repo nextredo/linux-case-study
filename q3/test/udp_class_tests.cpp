@@ -193,15 +193,21 @@ TEST_SUITE("UDP")
                 {
                     using namespace std::chrono;
 
+                    // Wait for a little longer than the expected packet send delay
+                    seconds rx_timeout = delay + 2s;
+
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
                     socklen_t sender_info_len = sizeof(sender_info);
 
                     // Time the blocking reception call
+                    // Ensure it waits for the delay period specified
+                    // This is sufficient if we give the sender a headstart
                     // TODO this ideally shouldn't include socket setup, so as to make
                     // the time spent in this function almost all spent waiting on recvfrom() syscall
                     auto start = steady_clock::now();
-                    auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len, ip_ver);
+                    auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
+                            &sender_info, &sender_info_len, ip_ver, rx_timeout);
                     auto end = steady_clock::now();
 
                     REQUIRE(bytes_recvd == std::strlen(msg));
@@ -234,7 +240,7 @@ TEST_SUITE("UDP")
                 (const uint8_t*)msg, std::strlen(msg), delay);
 
         // Wait for queued send to complete
-        // std::this_thread::sleep_for(delay);
+        std::this_thread::sleep_for(delay);
 
         // Complete receiver task
         rx_future.get();
