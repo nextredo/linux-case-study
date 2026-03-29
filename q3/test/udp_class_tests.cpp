@@ -3,6 +3,7 @@
 #include "doctest.h"
 #include "udp_class.hpp"
 
+#include <array>
 #include <chrono>
 #include <thread>
 #include <future>
@@ -25,6 +26,7 @@ using namespace std::chrono;
     // multiple senders at once
     // warn on port usage under 1024 (superuser only)
     // warn ports already in use
+    // re-starting periodic send / delayed send during a current periodic / delayed send
 
 namespace
 {
@@ -50,14 +52,14 @@ void check_tolerance(seconds expected, T elapsed, int perc = 15)
         return time_ms + ((time_ms / 100) * perc);
     };
 
-    auto max = tol(expected, -perc);
-    auto min = tol(expected, perc);
+    auto max = tol(expected, perc);
+    auto min = tol(expected, -perc);
 
     INFO("took ",        fmt_as_s(elapsed), " ms");
     INFO("allowed max ", fmt_as_s(max), " ms");
     INFO("allowed min ", fmt_as_s(min), " ms");
-    CHECK(elapsed > max);
-    CHECK(elapsed < min);
+    CHECK(elapsed < max);
+    CHECK(elapsed > min);
 }
 
 }
@@ -79,6 +81,8 @@ TEST_SUITE("UDP")
         const char* dst_port       = "12345";
         const char* msg            = "Hello World!";
 
+        bool expect_send_success = false;
+        std::function<void()> rx_fn;
 
         SUBCASE("addresses")
         {
@@ -167,7 +171,7 @@ TEST_SUITE("UDP")
         const char* dst_port       = "56789";
         const char* msg            = "delayed send pkt contents";
 
-        seconds delay = 0s;
+        seconds delay = 1s;
 
         UdpBroker sender;
         bool      expect_send_success = false;
@@ -274,7 +278,7 @@ TEST_SUITE("UDP")
                 expect_send_success = true;
                 interval_count = 1;
 
-                SUBCASE("short") interval = 1s;
+                SUBCASE("short") interval = 2s;
                 SUBCASE("long")  interval = 3s;
             }
 
@@ -283,7 +287,7 @@ TEST_SUITE("UDP")
                 expect_send_success = true;
                 interval_count = 3;
 
-                SUBCASE("short") interval = 1s;
+                SUBCASE("short") interval = 2s;
                 SUBCASE("long")  interval = 3s;
             }
 
@@ -299,6 +303,7 @@ TEST_SUITE("UDP")
                     socklen_t sender_info_len = sizeof(sender_info);
 
                     // Loop for the receiving timeout period
+                    size_t pkt_counter = 0;
                     auto loop_start = steady_clock::now();
                     while (steady_clock::now() - loop_start < rx_timeout)
                     {
@@ -306,6 +311,9 @@ TEST_SUITE("UDP")
                         auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
                                 &sender_info, &sender_info_len, ip_ver, rx_timeout);
                         auto end = steady_clock::now();
+
+                        if (bytes_recvd > 0)
+                            ++pkt_counter;
 
                         // Cease checking if no bytes received
                         REQUIRE(bytes_recvd == std::strlen(msg));
@@ -316,6 +324,9 @@ TEST_SUITE("UDP")
                         auto time_to_rx = end - start;
                         check_tolerance(interval, time_to_rx);
                     }
+
+                    // Should have received 1 packet for each interval waited
+                    CHECK(pkt_counter == interval_count);
                 };
         }
 

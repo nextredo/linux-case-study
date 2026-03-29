@@ -24,18 +24,22 @@ using namespace std::chrono_literals;
 
 // NOTE: Class limitations
 // - Doesn't handle packet fragmentation
+// - Doesn't allow multiple background workers at once
 
 // TODO doxygen - here, source, unit tests
 
 class UdpBroker
 {
 private:
-
-    // TODO bundle into an `Interruptable` class
+    // TODO Bundle cond var, mutex, thread into a worker class
+        // Pass reference to all-worker atomic exec flag on construction
+    // TODO Implement support for multiple background workers
+        // Vector of workers
+        // Unit tests for operations involving multiple workers
     std::atomic<bool>        _workerExecFlag = true;
     std::mutex               _workerMutex;
     std::condition_variable  _workerCondVar;
-    std::vector<std::thread> _workers;
+    std::thread              _worker;
 
 public:
     enum ip_ver_e : int

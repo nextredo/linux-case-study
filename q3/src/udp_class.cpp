@@ -2,17 +2,14 @@
 
 UdpBroker::~UdpBroker()
 {
-    // Tell workers they should stop working
+    // Tell workers to stop working
     _workerExecFlag = false;
 
-    // Wake all workers in condition-var based waiting operations
+    // Wake workers in condition-var based waiting operations
     _workerCondVar.notify_all();
 
-    for (auto& thread : _workers)
-    {
-        if (thread.joinable())
-            thread.join();
-    }
+    if (_worker.joinable())
+        _worker.join();
 }
 
 std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
@@ -204,7 +201,9 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
-    _workers.emplace_back(
+    // TODO check for joinable workers, get rid of those that have finished
+    // joinWorker();
+    _worker = std::thread{
         // TODO bake in cond var waiting into the worker thread class
         // TODO possibly replace with timed_mutex and try_lock_for
 
@@ -228,7 +227,7 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
                             data.data(), data.size());
                 }
             }
-    );
+        };
 
     return true;
 }
@@ -250,7 +249,7 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
-    _workers.emplace_back(
+    _worker = std::thread{
         // TODO bake in cond var waiting into the worker thread class
         // TODO possibly replace with timed_mutex and try_lock_for
 
@@ -274,7 +273,7 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
                     }
                 }
             }
-    );
+        };
 
     return true;
 }
