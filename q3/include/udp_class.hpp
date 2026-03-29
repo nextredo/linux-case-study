@@ -57,14 +57,14 @@ public:
     static ssize_t send(const char* ip, const char* port, const uint8_t* data, const size_t len);
 
     /// @brief Receives a UDP packet
-    /// @param      ip_ver_e       Which IP protocol to listen on
     /// @param      port           Host port to listen on
     /// @param[out] data           Buffer to put received data in
     /// @param      len            Length of the data buffer
     /// @param[out] senderAddr     Info about the sender
     /// @param[out] senderAddrLen  Length of the received sender info
+    /// @param      ip_ver_e       Which IP protocol to listen on
     /// @return Number of bytes received
-    static ssize_t recv(const ip_ver_e ipVer, const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen);
+    static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen, const ip_ver_e ipVer = ip_ver_e::UNSPEC);
 
     /// @brief Sends a UDP packet instantly
     bool sendImmediate();

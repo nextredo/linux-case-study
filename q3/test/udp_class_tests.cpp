@@ -91,7 +91,7 @@ TEST_SUITE("UDP")
                     socklen_t sender_info_len = sizeof(sender_info);
 
                     // Blocking reception call
-                    auto bytes_recvd = UdpBroker::recv(ip_ver, dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
+                    auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len, ip_ver);
 
                     // Capture sender and destination IPs
                     CAPTURE(UdpBroker::decodeIp(&sender_info));
