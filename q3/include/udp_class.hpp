@@ -22,6 +22,9 @@
 
 using namespace std::chrono_literals;
 
+// TODO note, doesn't handle packet fragmentation
+// TODO note, not tested on something other than loopback
+
 // TODO warn on port usage under 1024 (superuser only)
 // TODO warn ports already in use
 // TODO set send() recv() timeouts with setsockopt()
