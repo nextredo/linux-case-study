@@ -64,11 +64,11 @@ TEST_SUITE("UDP")
         constexpr const char* MSGS[]      = {"hello world!", "hi earth!"};
 
         // Set default test variables
+        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
         const char* dst_ip         = IPV4_DSTS[0];
         const char* dst_port       = DST_PORTS[0];
         const char* msg            = MSGS[0];
 
-        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::UNSPEC;
 
         // SUBCASE("addresses")
         // {
@@ -129,12 +129,12 @@ TEST_SUITE("UDP")
 
     TEST_CASE("sendDelayed")
     {
+        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
         const char* dst_ip         = "127.0.0.1";
         const char* dst_port       = "56789";
-        std::string msg            = "delayed send pkt contents";
-        std::chrono::seconds delay = 0s;
+        const char* msg            = "delayed send pkt contents";
 
-        UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::IPV4;
+        std::chrono::seconds delay = 0s;
 
         UdpBroker sender;
         bool      expect_success = false;
@@ -152,26 +152,28 @@ TEST_SUITE("UDP")
             expect_success = true;
             SUBCASE("after_1s")   delay = 1s;
             SUBCASE("after_2s")   delay = 2s;
+            SUBCASE("after_10s")  delay = 10s;
             // TODO reintroduce
             // SUBCASE("after_255s") delay = 255s;
         }
 
         // Expect a packet to be received
-        // auto rx_future = std::async(std::launch::async,
-        //         expect_packet, ip_ver, dst_ip, dst_port, msg);
+        // TODO add a packet timing check in here
+        auto rx_future = std::async(std::launch::async,
+                expect_packet, ip_ver, dst_ip, dst_port, msg);
 
         // Wait for reception thread to begin
         std::this_thread::sleep_for(1s);
 
         // Run the test
         bool queued_send = sender.sendDelayed(dst_ip, dst_port,
-                (const uint8_t*)msg.data(), msg.size(), delay);
+                (const uint8_t*)msg, std::strlen(msg), delay);
 
         // Wait for queued send to complete
-        std::this_thread::sleep_for(delay);
+        // std::this_thread::sleep_for(delay);
 
         // Complete receiver task
-        // rx_future.get();
+        rx_future.get();
 
         // Check function returned as expected
         CHECK(queued_send == expect_success);
