@@ -210,7 +210,8 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
 
         // Capture by value for ownership
         // Important in multithreaded contexts
-        [this, ip_mt, port_mt, data_mt, delay]()
+        [this, delay, ip = std::move(ip_mt),
+            port = std::move(port_mt), data = std::move(data_mt)]()
             {
                 // TODO this functionality would be much nicer as a class
                 // Wait using a condition variable, so when the
@@ -223,8 +224,8 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
                 // to stop & get joined
                 if (_workerExecFlag.load())
                 {
-                    UdpBroker::send(ip_mt.data(), port_mt.data(),
-                            data_mt.data(), data_mt.size());
+                    UdpBroker::send(ip.data(), port.data(),
+                            data.data(), data.size());
                 }
             }
     );
@@ -255,7 +256,8 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
 
         // Capture by value for ownership
         // Important in multithreaded contexts
-        [this, ip_mt, port_mt, data_mt, interval]()
+        [this, interval, ip = std::move(ip_mt),
+            port = std::move(port_mt), data = std::move(data_mt)]()
             {
                 std::unique_lock<std::mutex> lock(this->_workerMutex);
 
@@ -267,8 +269,8 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
                     // If we're still allowed to execute
                     if (_workerExecFlag.load())
                     {
-                        UdpBroker::send(ip_mt.data(), port_mt.data(),
-                                data_mt.data(), data_mt.size());
+                        UdpBroker::send(ip.data(), port.data(),
+                                data.data(), data.size());
                     }
                 }
             }
