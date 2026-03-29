@@ -30,12 +30,7 @@ TEST_SUITE("UDP")
     {
         constexpr char port[] = "55555";
         constexpr char ip[]   = "127.0.0.1";
-
         std::string msg = "hello world!!!!";
-
-        sa_family_t ip_ver = AF_INET;
-        struct sockaddr_storage dst_ip {};
-        UdpBroker::encodeIp(ip_ver, ip, &dst_ip);
 
         SUBCASE("sendImmediate")
         {
@@ -70,9 +65,6 @@ TEST_SUITE("UDP")
             // }
 
             // ----- test setup -----
-            // Setup the sockaddr object
-            UdpBroker::encodeIp(ip_ver, ip, &dst_ip);
-
             // Begin listening for a packet
             std::thread receiver(
                 [port, msg, ip]()
@@ -104,7 +96,7 @@ TEST_SUITE("UDP")
             std::this_thread::sleep_for(1s);
 
             // Send the packet
-            auto bytes_sent = UdpBroker::send(&dst_ip, port, (const uint8_t*)msg.data(), std::size(msg));
+            auto bytes_sent = UdpBroker::send(ip, port, (const uint8_t*)msg.data(), std::size(msg));
 
             // Complete receiver task
             receiver.join();
