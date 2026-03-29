@@ -48,7 +48,7 @@ void StartThread(
 
 int main()
 {
-    // Give each thread a run flag variable, so they
+    // Give each thread an execution flag variable, so they
     // do not interfere with each others' execution state
     std::atomic<bool> my_running1 = true;
     std::atomic<bool> my_running2 = true;
