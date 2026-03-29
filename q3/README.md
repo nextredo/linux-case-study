@@ -28,6 +28,9 @@ mkdir build && cd build
 # Create the build system, then compile with it
 cmake .. && make
 
+# Alternatively generate the build system and compile with debug symbols:
+# cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+
 # Run registered unit tests
 ctest
 

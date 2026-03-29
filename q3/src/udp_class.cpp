@@ -31,12 +31,13 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 }
 
 // TODO refactor so it doesn't need ipVer parameter
-bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData)
+bool UdpBroker::encodeIp(const char* ip, struct sockaddr_storage* ipData)
 {
     int ret = -1;
     void* ip_output = nullptr;
+    auto ip_ver = ipData->ss_family;
 
-    switch (ipVer)
+    switch (ip_ver)
     {
         case AF_INET:
             ip_output = &((struct sockaddr_in*)ipData)->sin_addr;
@@ -50,7 +51,7 @@ bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockadd
             break;
     };
 
-    ret = inet_pton(ipVer, ip, ip_output);
+    ret = inet_pton(ip_ver, ip, ip_output);
     return (ret == 1);
 }
 
@@ -60,7 +61,7 @@ bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockadd
 // lose the pesky "Address already in use" error message
 // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
-ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen)
+ssize_t UdpBroker::recv(const ip_ver_e ipVer, const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -68,7 +69,9 @@ ssize_t UdpBroker::recv(const char* port, uint8_t* data, const size_t len, struc
 
     // TODO make this selectable on call (enum class)
     // TODO combine with send() setup
-    hints.ai_family   = AF_UNSPEC;   // Use any address family (IPv4 or IPv6 here)
+    // Alternatively, can spawn an IPv6 server to listen for all
+    // incoming connections and receive IPv4 traffic in mapped address format
+    hints.ai_family   = ipVer;   // Use any address family (IPv4 or IPv6 here)
     hints.ai_socktype = SOCK_DGRAM;  // Only return datagram type sockets
     hints.ai_flags    = AI_PASSIVE;  // Autofill my IP socket (used for incoming connections)
     hints.ai_protocol = IPPROTO_UDP; // Only return sockets for the UDP protocol
