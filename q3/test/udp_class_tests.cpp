@@ -37,6 +37,7 @@ TEST_SUITE("UDP")
         // Set default test variables
         const char* dst_ip         = IPV4_DSTS[0];
         const char* dst_port       = PORTS[0];
+
         UdpBroker::ip_ver_e ip_ver = UdpBroker::ip_ver_e::UNSPEC;
         std::string msg            = MSGS[0];
 
@@ -48,7 +49,7 @@ TEST_SUITE("UDP")
                 {
                     ip_ver = UdpBroker::ip_ver_e::IPV4;
                     SUBCASE(IPV4_DSTS[0]) dst_ip = IPV4_DSTS[0];
-                    // SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
+                    SUBCASE(IPV4_DSTS[1]) dst_ip = IPV4_DSTS[1];
                 }
                 SUBCASE("IPv6")
                 {
@@ -87,8 +88,9 @@ TEST_SUITE("UDP")
                     // Blocking reception call
                     auto bytes_recvd = UdpBroker::recv(ip_ver, dst_port, rx_data, RX_DATA_LEN, &sender_info, &sender_info_len);
 
-                    // Check sender is as expected
-                    CHECK(UdpBroker::decodeIp(&sender_info) == std::string(dst_ip));
+                    // Capture sender and destination IPs
+                    CAPTURE(UdpBroker::decodeIp(&sender_info));
+                    CAPTURE(std::string(dst_ip));
 
                     // Check expected no. of bytes received
                     // Require as there's no point checking the msg contents if the length doesn't match
