@@ -28,40 +28,43 @@ TEST_SUITE("UDP")
 
     TEST_CASE("loopback")
     {
-        constexpr char port[] = "55555";
-        constexpr char ip[]   = "127.0.0.1";
-        std::string msg = "hello world!!!!";
+        // Set test permutations
+        constexpr const char* IPV4_ADDRS[] = {"127.0.0.1",    "127.0.0.2"};
+        constexpr const char* IPV6_ADDRS[] = {"::1",          "::2"};
+        constexpr const char* PORTS[]      = {"12345",        "55555"};
+        constexpr const char* MSGS[]       = {"hello world!", "hi earth!"};
+
+        // Set default test variables
+        const char* ip   = IPV4_ADDRS[0];
+        const char* port = PORTS[0];
+        std::string msg  = MSGS[0];
 
         SUBCASE("sendImmediate")
         {
-            // SUBCASE("addresses")
+            SUBCASE("addresses")
+            {
+                SUBCASE("IPv4")
+                {
+                    SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
+                    SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
+                }
+                // SUBCASE("IPv6")
+                // {
+                //     SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
+                //     SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
+                // }
+            }
+
+            // SUBCASE("ports")
             // {
-            //     SUBCASE("IPv4")
-            //     {
-            //         constexpr const char* IPV4_ADDRS[] = {
-            //             "127.0.0.2", "127.0.0.3",
-            //         };
-            //         SUBCASE(IPV4_ADDRS[0]) ip = IPV4_ADDRS[0];
-            //         SUBCASE(IPV4_ADDRS[1]) ip = IPV4_ADDRS[1];
-            //     }
-            //     SUBCASE("IPv6")
-            //     {
-            //         ip_ver = AF_INET6;
-            //         constexpr const char* IPV6_ADDRS[] = {
-            //             "::1", "::2",
-            //         };
-            //         SUBCASE(IPV6_ADDRS[0]) ip = IPV6_ADDRS[0];
-            //         SUBCASE(IPV6_ADDRS[1]) ip = IPV6_ADDRS[1];
-            //     }
-            // }
-            //
-            // SUBCASE("port")
-            // {
-            //     constexpr const char* PORTS[] = {
-            //         "12345", "9876",
-            //     };
             //     SUBCASE(PORTS[0]) port = PORTS[0];
             //     SUBCASE(PORTS[1]) port = PORTS[1];
+            // }
+            //
+            // SUBCASE("msgs")
+            // {
+            //     SUBCASE(MSGS[0]) msg = MSGS[0];
+            //     SUBCASE(MSGS[1]) msg = MSGS[1];
             // }
 
             // ----- test setup -----

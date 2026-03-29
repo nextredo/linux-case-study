@@ -30,6 +30,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
     return str;
 }
 
+// TODO refactor so it doesn't need ipVer parameter
 bool UdpBroker::encodeIp(const sa_family_t ipVer, const char* ip, struct sockaddr_storage* ipData)
 {
     int ret = -1;

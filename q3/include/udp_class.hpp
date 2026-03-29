@@ -59,7 +59,7 @@ public:
     static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen);
 
     /// @brief Sends a UDP packet instantly
-    bool sendImmediate(const struct in_addr* ip, uint16_t port, std::vector<uint8_t>& data);
+    bool sendImmediate();
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelay();
