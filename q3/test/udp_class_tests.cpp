@@ -173,6 +173,8 @@ TEST_SUITE("UDP")
                 {
                     // Wait for a little longer than the expected packet send delay
                     auto rx_timeout = delay + 2s;
+
+                    // TODO revamp these. Should be percentage based, and more intuitively used in code
                     auto min_expected_time_to_rx = delay - 1s;
                     auto max_expected_time_to_rx = delay + 1s;
 
@@ -232,8 +234,7 @@ TEST_SUITE("UDP")
         const char* msg            = "periodic send pkt contents";
 
         seconds interval         = 0s;
-        seconds rx_timeout       = 0s;
-        seconds rx_thread_timout = 0s;
+        size_t  interval_count   = 0;
 
         UdpBroker sender;
         bool      expect_send_success = false;
@@ -250,25 +251,65 @@ TEST_SUITE("UDP")
             rx_fn = []() {};
         }
 
-        SUBCASE("1_packet")
+        SUBCASE("valid")
         {
-            expect_send_success = true;
-            SUBCASE("short") interval = 1s;
-            SUBCASE("long")  interval = 3s;
+            SUBCASE("1_packet")
+            {
+                expect_send_success = true;
+                interval_count = 1;
 
-            // Wait for 1 interval's worth of packets, with tolerance
-            rx_timeout = interval + 1s;
+                SUBCASE("short") interval = 1s;
+                SUBCASE("long")  interval = 3s;
+            }
+
+            SUBCASE("3_packets")
+            {
+                expect_send_success = true;
+                interval_count = 3;
+
+                SUBCASE("short") interval = 1s;
+                SUBCASE("long")  interval = 3s;
+            }
+
+            rx_fn = [dst_port, msg, dst_ip, ip_ver, interval, interval_count]()
+                {
+                    // Wait for a little longer than however many
+                    // intervals we're testing (plus tolerance)
+                    auto rx_timeout = interval_count * interval + 2s;
+
+                    // TODO revamp these
+                    auto max_interval_time = interval + 0.5s;
+                    auto min_interval_time = interval - 0.5s;
+
+                    uint8_t rx_data[RX_DATA_LEN] {};
+                    struct sockaddr_storage sender_info {};
+                    socklen_t sender_info_len = sizeof(sender_info);
+
+                    // Loop for the receiving timeout period
+                    auto loop_start = steady_clock::now();
+                    while (steady_clock::now() - loop_start < rx_timeout)
+                    {
+                        auto start = steady_clock::now();
+                        auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
+                                &sender_info, &sender_info_len, ip_ver, rx_timeout);
+                        auto end = steady_clock::now();
+
+                        // Cease checking if no bytes received
+                        REQUIRE(bytes_recvd == std::strlen(msg));
+                        CHECK((const char*)rx_data == msg);
+
+                        // Perform time checks & logging
+                        // Ensure each packet received approximately on-time
+                        auto time_to_rx = end - start;
+                        INFO("took ",        fmt_as_s(time_to_rx), " ms");
+                        INFO("allowed max ", fmt_as_s(max_interval_time), " ms");
+                        INFO("allowed min ", fmt_as_s(min_interval_time), " ms");
+                        CHECK(time_to_rx > min_interval_time);
+                        CHECK(time_to_rx < max_interval_time);
+                    }
+                };
         }
 
-        SUBCASE("3_packets")
-        {
-            expect_send_success = true;
-            SUBCASE("short") interval = 1s;
-            SUBCASE("long")  interval = 3s;
-
-            // Wait for 1 intervals' worth of packets, with tolerance
-            rx_timeout = interval * 3 + 1s;
-        }
 
         // -------------------------- Test setup ---------------------------
         // Begin async func to check for packet reception (or not)
