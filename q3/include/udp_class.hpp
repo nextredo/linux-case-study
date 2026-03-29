@@ -3,6 +3,8 @@
 #include <cstring>
 
 #include <vector>
+#include <thread>
+#include <chrono>
 #include <string>
 
 #include <unistd.h>
@@ -15,6 +17,8 @@
 // Alternatively, use `#pragma once`
 #ifndef UDP_CLASS_H
 #define UDP_CLASS_H
+
+using namespace std::chrono_literals;
 
 // TODO warn on port usage under 1024 (superuser only)
 // TODO warn ports already in use
@@ -38,6 +42,7 @@ public:
 class UdpBroker
 {
 private:
+    std::vector<std::thread> _threads;
 
 public:
     enum ip_ver_e : int
@@ -51,11 +56,13 @@ public:
 
     static bool encodeIp(const char* ip, struct sockaddr_storage* ipData);
 
-    /// @brief Sends a UDP packet
+    /// @brief Sends a UDP packet (immediately)
     /// @return Number of bytes sent. Can be less than the input number
     /// if, for example, information is to be split across multiple packets
-    static ssize_t send(const char* ip, const char* port, const uint8_t* data, const size_t len);
+    static ssize_t send(const char* ip, const char* port,
+            const uint8_t* data, const size_t len);
 
+    // TODO change this and recv to accept void* bufs
     /// @brief Receives a UDP packet
     /// @param      port           Host port to listen on
     /// @param[out] data           Buffer to put received data in
@@ -64,13 +71,13 @@ public:
     /// @param[out] senderAddrLen  Length of the received sender info
     /// @param      ip_ver_e       Which IP protocol to listen on
     /// @return Number of bytes received
-    static ssize_t recv(const char* port, uint8_t* data, const size_t len, struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen, const ip_ver_e ipVer = ip_ver_e::UNSPEC);
-
-    /// @brief Sends a UDP packet instantly
-    bool sendImmediate();
+    static ssize_t recv(const char* port, uint8_t* data, const size_t len,
+            struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
+            const ip_ver_e ipVer = ip_ver_e::UNSPEC);
 
     /// @brief Sends a UDP packet after a specified delay
-    bool sendDelay();
+    bool sendDelayed(const char* ip, const char* port,
+        const uint8_t* data, const size_t len, std::chrono::seconds delay);
 
     /// @brief Sends a UDP packet periodically
     bool sendPeriodic();

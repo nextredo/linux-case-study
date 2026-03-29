@@ -139,7 +139,8 @@ cleanup:
 }
 
 
-ssize_t UdpBroker::send(const char* ip, const char* port, const uint8_t* data, const size_t len)
+ssize_t UdpBroker::send(const char* ip, const char* port,
+        const uint8_t* data, const size_t len)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -191,3 +192,28 @@ cleanup:
 }
 
 
+bool UdpBroker::sendDelayed(const char* ip, const char* port,
+        const uint8_t* data, const size_t len, std::chrono::seconds delay)
+{
+    // Ensure number is constrained
+    // Alternatively, std::clamp() can be used
+    if ((delay < 1s) || (delay > 255s))
+        return false;
+
+    std::string ip_mt   = ip;
+    std::string port_mt = port;
+    std::vector<uint8_t> data_mt {data, data + len};
+
+    _threads.emplace_back(
+        // Capture by value for ownership
+        // Important in multithreaded contexts
+        [ip_mt, port_mt, data_mt, delay]()
+            {
+                std::this_thread::sleep_for(delay);
+                UdpBroker::send(ip_mt.data(), port_mt.data(),
+                        data_mt.data(), data_mt.size());
+            }
+    );
+
+    return true;
+}
