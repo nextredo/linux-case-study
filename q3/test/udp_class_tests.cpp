@@ -21,7 +21,10 @@ using namespace std::chrono;
 // - Not tested on something other than loopback
 // - Not tested with "well-known"/"system" port numbers (0 - 1024)
 
-// TODO tests for multiple senders at once
+// TODO tests for
+    // multiple senders at once
+    // warn on port usage under 1024 (superuser only)
+    // warn ports already in use
 
 namespace
 {
@@ -30,7 +33,7 @@ namespace
 constexpr size_t RX_DATA_LEN = 255;
 
 // WARN: Will only work with std::chrono::duration types
-// TODO add C++20 concepts to constrain this??
+// NOTE: Could constrain this with C++20 concepts
 template<typename T>
 auto fmt_as_s(T time)
 {
@@ -105,9 +108,6 @@ TEST_SUITE("UDP")
             SUBCASE("alt_msg") msg = "Hi Earth!!!";
         }
 
-        // Reception will not work if packet is fragmented
-        REQUIRE(std::strlen(msg) + 1 < RX_DATA_LEN);
-
         // -------------------------- Test setup ---------------------------
         // Begin listening for (receiving/rx-ing) a packet
         // Using std::async over std::thread as it captures and stores any
@@ -116,6 +116,9 @@ TEST_SUITE("UDP")
         auto rx_future = std::async(std::launch::async,
             [dst_port, msg, dst_ip, ip_ver]()
             {
+                // Reception will not work if packet is fragmented
+                REQUIRE(std::strlen(msg) + 1 < RX_DATA_LEN);
+
                 // TODO std vector instead
                 uint8_t rx_data[RX_DATA_LEN] {};
                 struct sockaddr_storage sender_info {};

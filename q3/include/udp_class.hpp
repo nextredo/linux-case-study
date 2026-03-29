@@ -1,4 +1,4 @@
-#include <cstdint>
+#include <cstddef>
 #include <cerrno>
 #include <cstring>
 
@@ -25,24 +25,7 @@ using namespace std::chrono_literals;
 // NOTE: Class limitations
 // - Doesn't handle packet fragmentation
 
-// TODO warn on port usage under 1024 (superuser only)
-// TODO warn ports already in use
-// TODO set send() recv() timeouts with setsockopt()
 // TODO doxygen - here, source, unit tests
-// TODO errno usage
-// TODO debug function to print dest ip (inet_ntop INET_ADDRSTRLEN)
-
-class UdpSender
-{
-private:
-public:
-};
-
-class UdpReceiver
-{
-private:
-public:
-};
 
 class UdpBroker
 {
@@ -62,10 +45,8 @@ public:
         IPV6   = AF_INET6,
     };
 
-    // Constructor
-    // UdpBroker();
-
-    // Destructor
+    /// @brief Custom destructor
+    /// @note  Correctly ends worker threads
     ~UdpBroker();
 
     static std::string decodeIp(struct sockaddr_storage* sa);
