@@ -46,31 +46,6 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
     return str;
 }
 
-// TODO refactor so it doesn't need ipVer parameter
-bool UdpBroker::encodeIp(const char* ip, struct sockaddr_storage* ipData)
-{
-    int ret = -1;
-    void* ip_output = nullptr;
-    auto ip_ver = ipData->ss_family;
-
-    switch (ip_ver)
-    {
-        case AF_INET:
-            ip_output = &((struct sockaddr_in*)ipData)->sin_addr;
-            break;
-
-        case AF_INET6:
-            ip_output = &((struct sockaddr_in6*)ipData)->sin6_addr;
-            break;
-
-        default:
-            break;
-    };
-
-    ret = inet_pton(ip_ver, ip, ip_output);
-    return (ret == 1);
-}
-
 // TODO allow socket re-binding without errors
 // int yes=1;
 // char yes='1'; // Solaris people use this
@@ -191,7 +166,9 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
         goto cleanup;
     }
 
-    // TODO insert `bind` function to allow sending from a specific IP
+    // NOTE: Stretch goal
+    // Use `bind()` to allow sending from a specific IP
+    // Useful if you have multiple interfaces, each with their own IP
 
     errno = 0;
     bytes_sent = sendto(socket_fd, data, len, 0,

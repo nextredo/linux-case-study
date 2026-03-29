@@ -22,8 +22,8 @@
 
 using namespace std::chrono_literals;
 
-// TODO note, doesn't handle packet fragmentation
-// TODO note, not tested on something other than loopback
+// NOTE: Class limitations
+// - Doesn't handle packet fragmentation
 
 // TODO warn on port usage under 1024 (superuser only)
 // TODO warn ports already in use
@@ -47,7 +47,6 @@ public:
 class UdpBroker
 {
 private:
-    // std::atomic<bool> _workerExecFlag = true;
 
     // TODO bundle into an `Interruptable` class
     std::atomic<bool>        _workerExecFlag = true;
@@ -98,12 +97,10 @@ public:
         const uint8_t* data, const size_t len,
         std::chrono::seconds delay);
 
+    /// @brief Sends a UDP packet periodically
     bool sendPeriodic(const char* ip, const char* port,
         const uint8_t* data, const size_t len,
         std::chrono::seconds interval);
-
-    /// @brief Sends a UDP packet periodically
-    bool sendPeriodic();
 };
 
 

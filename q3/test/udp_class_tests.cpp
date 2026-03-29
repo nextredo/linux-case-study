@@ -4,8 +4,6 @@
 #include "udp_class.hpp"
 
 #include <chrono>
-#include <algorithm>
-#include <iterator>
 #include <thread>
 #include <future>
 
@@ -13,6 +11,13 @@
 #include <sys/socket.h>
 
 using namespace std::chrono_literals;
+
+// TODO instructions for pulling this repo
+    // ensure submodule is pulled too & updated for q3 to work
+
+// NOTE: Unit test limitations
+// - Not tested on something other than loopback
+// - Not tested with "well-known"/"system" port numbers (0 - 1024)
 
 // TODO tests for multiple senders at once
 
@@ -276,6 +281,9 @@ TEST_SUITE("UDP")
                     // Wait for a little longer than however many
                     // intervals we're testing (plus tolerance)
                     auto rx_timeout = interval_count * interval + 2s;
+
+                    // TODO all tolerancing of timing in this ENTIRE UNIT TEST FILE should
+                    // be proportional to its input (e.g. +5% tolerance)
 
                     // TODO revamp these
                     auto max_interval_time = interval + 0.5s;
