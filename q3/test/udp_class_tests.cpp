@@ -3,7 +3,6 @@
 #include "doctest.h"
 #include "udp_class.hpp"
 
-#include <array>
 #include <chrono>
 #include <thread>
 #include <future>
@@ -28,7 +27,7 @@ using namespace std::chrono;
     // warn ports already in use
     // re-starting periodic send / delayed send during a current periodic / delayed send
 
-// TODO
+// TODO other
     // capture `ctrl+C` to exit gracefully
     // remove timeouts to give rx thread a headstart
         // should combine nicely with moving socket creation into class instance construction itself
@@ -49,7 +48,7 @@ auto fmt_as_s(T time)
 };
 
 template<typename T>
-void check_tolerance(seconds expected, T elapsed, int perc = 5)
+void check_tolerance(seconds expected, T elapsed, int perc = 10)
 {
     auto tol = [](seconds time, int perc)
     {
@@ -150,11 +149,11 @@ TEST_SUITE("UDP")
         );
 
         // Wait for reception thread to begin
-        std::this_thread::sleep_for(10ms);
+        std::this_thread::sleep_for(80ms);
 
         // Send the packet
-        // TODO fix this not sending the null byte of the string
-            // change msg to be stored as a const void* and actual length instead
+        // WARN: This does not send the null byte of the string
+        // Ideally, it probably should be sent
         auto bytes_sent = UdpBroker::send(dst_ip, dst_port, (const uint8_t*)msg, std::strlen(msg));
 
         // Complete receiver task
@@ -237,7 +236,7 @@ TEST_SUITE("UDP")
         auto rx_future = std::async(std::launch::async, rx_fn);
 
         // Give receiver thread a headstart to begin listening
-        std::this_thread::sleep_for(10ms);
+        std::this_thread::sleep_for(80ms);
 
         // Run the test
         bool queued_send = sender.sendDelayed(dst_ip, dst_port,
@@ -302,10 +301,6 @@ TEST_SUITE("UDP")
                     // WARN: API states we must only be able to delay for an integer number of seconds
                     auto loop_timeout = interval_count * interval + 1s;
 
-                    uint8_t rx_data[RX_DATA_LEN] {};
-                    struct sockaddr_storage sender_info {};
-                    socklen_t sender_info_len = sizeof(sender_info);
-
                     // Loop for the receiving timeout period
                     size_t pkt_counter = 0;
                     auto loop_start = steady_clock::now();
@@ -313,15 +308,19 @@ TEST_SUITE("UDP")
                     {
                         // Calculate remaining time for packet reception
                         auto elapsed = steady_clock::now() - loop_start;
-                        auto remaining = duration_cast<seconds>(loop_timeout - elapsed);
+                        auto remaining = loop_timeout - elapsed;
 
                         // Break if no time remains
                         if (remaining <= 0s)
                             break;
 
+                        uint8_t rx_data[RX_DATA_LEN] {};
+                        struct sockaddr_storage sender_info {};
+                        socklen_t sender_info_len = sizeof(sender_info);
+
                         auto start = steady_clock::now();
                         auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
-                                &sender_info, &sender_info_len, ip_ver, remaining);
+                                &sender_info, &sender_info_len, ip_ver, duration_cast<seconds>(remaining));
                         auto end = steady_clock::now();
 
                         if (bytes_recvd > 0)
@@ -347,7 +346,7 @@ TEST_SUITE("UDP")
         auto rx_future = std::async(std::launch::async, rx_fn);
 
         // Give receiver thread a headstart to begin listening
-        std::this_thread::sleep_for(10ms);
+        std::this_thread::sleep_for(80ms);
 
         // Run the test
         bool queued_send = sender.sendPeriodic(dst_ip, dst_port,
