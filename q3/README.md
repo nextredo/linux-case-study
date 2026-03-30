@@ -10,33 +10,40 @@
 ### Test Driven Development
 - I strongly believe in Test-Driven Development (TDD)
   - Having read and applied [Kent Beck's book on the subject][kb-tdd], I really like how it works for me
-- So, the iterative design loop will be:
+- So, the iterative design loop has been:
   - Red - create a test that fails
   - Green - get the test to pass with the bare minimum amount of code
   - Refactor - clean the code up, ensuring it still passes
-
-## Assumptions
-- N/A
+- This approach works well once you get the ball rolling
+  - Once unit tests are in place, you can objectively verify if written code matches the API and expectations
+  - This achieves separation of "code that works" and "code that's clean", allowing you to approach those two problems independently
 
 ## Building
 - Done through CMake
 
+### Basic
 ```bash
 # Make build dir, cd into it
 mkdir build && cd build
 
-# Create the build system, then compile with it
-cmake .. && make
-
-# Alternatively generate the build system and compile with debug symbols:
-# cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+# Create the build system
+cmake ..
 
 # Run registered unit tests
 ctest
+```
 
-# Alternatively, run the following to run the only existing set of tests
-# Optionally add the `-s` switch to show passing tests
+### Advanced
+```bash
+# Generate the build system and compile with debug symbols:
+cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+
+# Once built, run a specific test binary and
+# add the `-s` switch to show passing tests. e.g.
 ./build/test/udp_class_tests -s
+
+# Make documentation
+make doc
 ```
 
 [kb-tdd]: https://www.amazon.com.au/Test-Driven-Development-Kent-Beck/dp/0321146530
