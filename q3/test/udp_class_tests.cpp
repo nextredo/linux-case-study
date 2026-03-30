@@ -47,7 +47,7 @@ auto fmt_as_s(T time)
 };
 
 template<typename T>
-void check_tolerance(seconds expected, T elapsed, int perc = 15)
+void check_tolerance(seconds expected, T elapsed, int perc = 5)
 {
     auto tol = [](seconds time, int perc)
     {
@@ -148,7 +148,7 @@ TEST_SUITE("UDP")
         );
 
         // Wait for reception thread to begin
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(10ms);
 
         // Send the packet
         // TODO fix this not sending the null byte of the string
@@ -235,7 +235,7 @@ TEST_SUITE("UDP")
         auto rx_future = std::async(std::launch::async, rx_fn);
 
         // Give receiver thread a headstart to begin listening
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(10ms);
 
         // Run the test
         bool queued_send = sender.sendDelayed(dst_ip, dst_port,
@@ -338,7 +338,7 @@ TEST_SUITE("UDP")
         auto rx_future = std::async(std::launch::async, rx_fn);
 
         // Give receiver thread a headstart to begin listening
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(10ms);
 
         // Run the test
         bool queued_send = sender.sendPeriodic(dst_ip, dst_port,
