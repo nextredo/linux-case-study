@@ -15,6 +15,7 @@ void UdpBroker::stopWorker()
     // Wake workers in condition-var based waiting operations
     _workerCondVar.notify_all();
 
+    // Join workers
     if (_worker.joinable())
         _worker.join();
 }
@@ -25,6 +26,8 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
     std::string str;
     const void* ip = nullptr;
 
+    // Ensure string is correct length for IP type,
+    // and get the IP from the correctly casted socket addr struct
     switch (sa->ss_family)
     {
         case AF_INET:
@@ -41,6 +44,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
             break;
     };
 
+    // Convert network format to presentation format
     inet_ntop(sa->ss_family, ip, str.data(), str.size());
 
     // Truncate string object to length of null-terminated contents
@@ -70,6 +74,7 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         // each worker (depending on if it's tx worker or rx)
         // should have a socket
 
+    // Get info for listening
     auto listener_info = AddressInfo(nullptr, port, &hints);
     if (!listener_info.valid())
         fprintf(stderr, "addr info error: %s\n", listener_info.errStr());
@@ -99,11 +104,13 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         .tv_usec = us_left.count(),
     };
 
+    // Set socket timeout
     errno = 0;
     int sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
         perror("Reception socket options");
 
+    // Receive a packet
     errno = 0;
     ssize_t bytes_recvd = recvfrom(socket_fd, data, len, 0,
             (struct sockaddr*)senderAddr, senderAddrLen);
@@ -125,6 +132,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
         .ai_protocol = IPPROTO_UDP,
     };
 
+    // Get address destination info
     auto dst_info = AddressInfo(ip, port, &hints);
     if (!dst_info.valid())
         fprintf(stderr, "addr info error: %s\n", dst_info.errStr());
@@ -132,6 +140,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     // WARN: Ignoring possibility of multiple address information
     // returns from getaddrinfo() in addrinfo struct
 
+    // Open sender socket
     errno = 0;
     int socket_fd = socket(dst_info->ai_family, dst_info->ai_socktype, dst_info->ai_protocol);
     if (socket_fd == -1)
@@ -141,6 +150,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     // Use `bind()` to allow sending from a specific IP
     // Useful if you have multiple interfaces, each with their own IP
 
+    // Send a packet
     errno = 0;
     ssize_t bytes_sent = sendto(socket_fd, data, len, 0,
             dst_info->ai_addr, dst_info->ai_addrlen);
@@ -164,12 +174,14 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
     if ((delay < 1s) || (delay > 255s))
         return false;
 
+    // Capture arguments by value
     std::string ip_mt   = ip;
     std::string port_mt = port;
     std::vector<uint8_t> data_mt {
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
+    // Stop any prior work
     stopWorker();
     allowWork();
 
@@ -207,12 +219,14 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
     if ((interval < 1s) || (interval > 255s))
         return false;
 
+    // Capture arguments by value
     std::string ip_mt   = ip;
     std::string port_mt = port;
     std::vector<uint8_t> data_mt {
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
+    // Stop any prior work
     stopWorker();
     allowWork();
 

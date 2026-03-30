@@ -58,8 +58,6 @@ public:
     ~AddressInfo() { freeaddrinfo(_info); }
 };
 
-// TODO doxygen - here, source, unit tests
-
 /// @brief Basic send/receive class
 /// @note Class limitations
 /// @n    Doesn't handle packet fragmentation
