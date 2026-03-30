@@ -6,6 +6,10 @@
 > - Request periodic sending of a udp message to specific ip & port every `X` seconds.<br>
 >   - (where X could be any value between 1s and 255s)<br>
 
+## Notes
+- Some `WARN`, `NOTE` or `TODO` comments may be left in the codebase
+- These show possible future improvements that could be made should project scope or time permit it.
+
 ## Design Process
 ### Test Driven Development
 - I strongly believe in Test-Driven Development (TDD)

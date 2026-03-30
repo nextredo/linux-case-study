@@ -12,7 +12,7 @@ git clone https://github.com/nextredo/linux-case-study.git --recurse-submodules
 - [Question 2 - `python_task.py`](./q2)
 - [Question 3 - C++ UDP Class Design](./q3)
 
-## Timing
+## Information
 - Email received
   - Wed, Mar 25, 11:28 (CET/UTC+1)
   - Wed, Mar 25, 21:28 (AEDT/UTC+11)
@@ -21,6 +21,10 @@ git clone https://github.com/nextredo/linux-case-study.git --recurse-submodules
 - Due
   - Mon, Mar 30, 11:28 (CET/UTC+1)
   - Mon, Mar 30, 21:28 (AEDT/UTC+11)
+- Expected time to complete
+  - 3-5 hours
+- Submission process
+  - Public GitHub repository
 
 ## Environment
 - Ubuntu 22.04.5 LTS (x86_64)
