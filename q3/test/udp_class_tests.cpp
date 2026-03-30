@@ -47,23 +47,18 @@ auto fmt_as_ms(T time)
     return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
 };
 
-template<typename T>
-void check_tolerance(seconds expected, T elapsed, int perc = 10)
+void check_time_point_tolerance(time_point<steady_clock> expected, time_point<steady_clock> actual, milliseconds tol)
 {
-    auto tol = [](seconds time, int perc)
-    {
-        auto time_ms = duration_cast<milliseconds>(time);
-        return time_ms + ((time_ms / 100) * perc);
-    };
+    auto min = expected - tol;
+    auto max = expected + tol;
 
-    auto max = tol(expected, perc);
-    auto min = tol(expected, -perc);
-
-    INFO("took ",        fmt_as_ms(elapsed), " ms");
-    INFO("allowed max ", fmt_as_ms(max), " ms");
-    INFO("allowed min ", fmt_as_ms(min), " ms");
-    CHECK(elapsed < max);
-    CHECK(elapsed > min);
+    // TODO fix printing
+    INFO("expected at ",     expected);
+    INFO("occurred at ",     actual);
+    INFO("no earlier than ", min);
+    INFO("no later than ",   max);
+    CHECK(actual < max);
+    CHECK(actual > min);
 }
 
 }
@@ -203,31 +198,33 @@ TEST_SUITE("UDP")
 
             rx_fn = [dst_port, msg, dst_ip, ip_ver, delay]()
                 {
-                    // Wait for a little longer than the expected packet send delay
-                    // WARN: API states we must only be able to delay for an integer number of seconds
-                    auto rx_timeout = delay + 1s;
+                    auto task_start = steady_clock::now();
 
+                    // Setup reception structures
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
                     socklen_t sender_info_len = sizeof(sender_info);
 
+                    // WARN: API states we must only be able to delay for an integer number of seconds
+                    seconds receive_for    = 1s;
+                    auto    expect_send_at = task_start + delay;
+
+                    // Sleep until half the reception window before next expected send time
+                    std::this_thread::sleep_until(expect_send_at - (receive_for / 2));
+
                     // Time the blocking reception call
-                    // Ensure it waits for the delay period specified
-                    // This is sufficient if we give the sender a headstart
                     // TODO this ideally shouldn't include socket setup, so as to make
                     // the time spent in this function almost all spent waiting on recvfrom() syscall
-                    auto start = steady_clock::now();
                     auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
-                            &sender_info, &sender_info_len, ip_ver, rx_timeout);
-                    auto end = steady_clock::now();
+                            &sender_info, &sender_info_len, ip_ver, receive_for);
+                    auto received_at = steady_clock::now();
 
                     // Cease checking if no bytes received
                     REQUIRE(bytes_recvd == std::strlen(msg));
                     CHECK((const char*)rx_data == msg);
 
                     // Perform time checks & logging
-                    auto time_to_rx = end - start;
-                    check_tolerance(delay, time_to_rx);
+                    check_time_point_tolerance(expect_send_at, received_at, receive_for);
                 };
         }
 
@@ -296,50 +293,135 @@ TEST_SUITE("UDP")
 
             rx_fn = [dst_port, msg, dst_ip, ip_ver, interval, interval_count]()
                 {
-                    // Wait for a little longer than however many
-                    // intervals we're testing (plus tolerance)
+                    auto task_start = steady_clock::now();
+
                     // WARN: API states we must only be able to delay for an integer number of seconds
-                    auto loop_timeout = interval_count * interval + 1s;
-
-                    // Loop for the receiving timeout period
+                    seconds receive_for = 1s;
                     size_t pkt_counter = 0;
-                    auto loop_start = steady_clock::now();
-                    while (steady_clock::now() - loop_start < loop_timeout)
+
+                    // TODO change the comment below vv
+                    // NOTE: First send expected 1 interval after beginning the send function
+                    for (int i = 1; i <= interval_count; ++i)
                     {
-                        // Calculate remaining time for packet reception
-                        auto elapsed = steady_clock::now() - loop_start;
-                        auto remaining = loop_timeout - elapsed;
-
-                        // Break if no time remains
-                        if (remaining <= 0s)
-                            break;
-
+                        // Setup structures to receive
                         uint8_t rx_data[RX_DATA_LEN] {};
                         struct sockaddr_storage sender_info {};
                         socklen_t sender_info_len = sizeof(sender_info);
 
-                        auto start = steady_clock::now();
-                        auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
-                                &sender_info, &sender_info_len, ip_ver, duration_cast<seconds>(remaining));
-                        auto end = steady_clock::now();
+                        // Expect packets to be sent every `interval` after the `task_start` time point
+                        auto expect_send_at = task_start + (interval * i);
 
+                        // Sleep until half the reception window before next expected send time
+                        std::this_thread::sleep_until(expect_send_at - (receive_for / 2));
+
+                        // Receive packets for 1s
+                        auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
+                                &sender_info, &sender_info_len, ip_ver, receive_for);
+
+                        // Get time point for reception end
+                        auto received_at = steady_clock::now();
+
+                        // Increment pkts received if necessary
                         if (bytes_recvd > 0)
                             ++pkt_counter;
 
-                        INFO("waited ", fmt_as_ms(remaining), "ms");
-
-                        // Cease checking if no bytes received
+                        // Check packet data
                         REQUIRE(bytes_recvd == std::strlen(msg));
                         CHECK((const char*)rx_data == msg);
 
-                        // Perform time checks & logging
-                        // Ensure each packet received approximately on-time
-                        auto time_to_rx = end - start;
-                        check_tolerance(interval, time_to_rx);
+                        // Check packet rx time was within 0.5s of the expected send time
+                            // (spoiler: it will be if we received it)
+                        check_time_point_tolerance(expect_send_at, received_at, receive_for);
+
+                        // Loop
                     }
 
                     // Should have received 1 packet for each interval waited
                     CHECK(pkt_counter == interval_count);
+
+                    // TODO BETTER IDEA
+                    // Just sleep until 0.5s before we expect the pkt to be sent
+                    // Receive for 1s (so we stop receiving 0.5s after pkt should be received)
+                    // Then sleep again until we expect the next one
+
+
+
+
+                    // 1st timeout = interval + tolerance
+                        // wait until reception
+                        // wait for rest of interval
+                        // loop again
+                    // 2nd timeout = interval + tolerance
+                        // wait until reception
+                        // wait for rest of interval
+                        // loop again
+                    // 3rd timeout = interval + tolerance
+                        // wait until reception
+                        // wait for rest of interval
+                        // no loop
+
+                    // while (true)
+                    // {
+                    //     // Begin receiving
+                    //     // Wait until reception returns
+                    //         // either from a packet
+                    //         // or from timeout
+                    //     // Increment pkts received if necessary
+                    //     // Check packet data
+                    //     // Check packet was received within interval tolerancing
+                    //     // If reception returned EARLY (due to packet)
+                    //         // wait for rest of the non-toleranced interval
+                    //     // If reception returned LATE  (due to toleranced timeout)
+                    //         // shorten next reception to be lmao
+                    // }
+
+
+
+
+
+
+
+
+
+
+
+
+                    // Loop for the receiving timeout period
+                    // size_t pkt_counter = 0;
+                    // auto loop_start = steady_clock::now();
+                    // while (steady_clock::now() - loop_start < loop_timeout)
+                    // {
+                    //     // Calculate remaining time for packet reception
+                    //     auto elapsed = steady_clock::now() - loop_start;
+                    //     auto remaining = duration_cast<seconds>(loop_timeout - elapsed);
+                    //
+                    //     // Break if no time remains
+                    //     if (remaining <= 0s)
+                    //         break;
+                    //
+                    //     uint8_t rx_data[RX_DATA_LEN] {};
+                    //     struct sockaddr_storage sender_info {};
+                    //     socklen_t sender_info_len = sizeof(sender_info);
+                    //
+                    //     auto start = steady_clock::now();
+                    //     auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
+                    //             &sender_info, &sender_info_len, ip_ver, remaining);
+                    //     auto end = steady_clock::now();
+                    //
+                    //     if (bytes_recvd > 0)
+                    //         ++pkt_counter;
+                    //
+                    //     INFO("rx timeout ", fmt_as_ms(remaining), "ms");
+                    //
+                    //     // Cease checking if no bytes received
+                    //     REQUIRE(bytes_recvd == std::strlen(msg));
+                    //     CHECK((const char*)rx_data == msg);
+                    //
+                    //     // Perform time checks & logging
+                    //     // Ensure each packet received approximately on-time
+                    //     auto time_to_rx = end - start;
+                    //     check_tolerance(interval, time_to_rx);
+                    // }
                 };
         }
 

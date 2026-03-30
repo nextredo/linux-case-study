@@ -94,16 +94,24 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         .tv_sec = timeout.count()
     };
 
+    // TODO remove
+    // int sock_reuse = 1;
+
     errno = 0;
     int sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
         perror("Reception socket options");
 
+    // TODO remove
+    // sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &sock_reuse, sizeof(sock_reuse));
+    // if (sockopt_ret == -1)
+    //     perror("Reception socket options");
+
     errno = 0;
     ssize_t bytes_recvd = recvfrom(socket_fd, data, len, 0,
             (struct sockaddr*)senderAddr, senderAddrLen);
     if (bytes_recvd <= 0)
-        perror("Reception socket reception");
+        perror("Reception socket recvfrom");
 
     close(socket_fd);
     return bytes_recvd;
