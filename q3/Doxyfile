@@ -1,0 +1,47 @@
+# Doxyfile for UDP Class Project
+
+# Project Information
+PROJECT_NAME           = "UDP Broker Class"
+PROJECT_NUMBER         = 0.0.1
+PROJECT_BRIEF          = "A basic UDP networking class with Doxygen documentation"
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/docs
+
+# Input Files
+INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/include/udp_class.hpp \
+                         @CMAKE_CURRENT_SOURCE_DIR@/src/udp_class.cpp
+INPUT_ENCODING         = UTF-8
+RECURSIVE              = NO
+
+# Output Format
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+
+# Documentation Processing
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+
+# Source Code Listing
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+
+# File Types
+FILE_PATTERNS          = *.hpp *.cpp *.h *.c *.c++
+EXCLUDE_PATTERNS       = */build/* */test/*
+
+# Warnings
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+
+# Search Engine
+SEARCHENGINE           = NO
+
+# Doxygen Processing
+GENERATE_TREEVIEW      = YES
+TREEVIEW_WIDTH         = 250
+STRIP_CODE_COMMENTS    = NO
