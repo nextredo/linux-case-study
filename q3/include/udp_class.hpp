@@ -28,11 +28,7 @@ private:
     int              _gaiRet = -1;
 
 public:
-    auto operator ->()
-    {
-        return _info;
-    }
-
+    [[nodiscard]] auto operator ->()  { return _info; }
     [[nodiscard]] bool valid()  const { return (_gaiRet == 0); }
     [[nodiscard]] auto errStr() const { return gai_strerror(_gaiRet); }
 
@@ -41,13 +37,9 @@ public:
     AddressInfo(const char* name, const char* service,
             const struct addrinfo* request) :
         _gaiRet(getaddrinfo(name, service, request, &_info))
-    {
-    }
+    { }
 
-    ~AddressInfo()
-    {
-        freeaddrinfo(_info);
-    }
+    ~AddressInfo() { freeaddrinfo(_info); }
 };
 
 // TODO doxygen - here, source, unit tests

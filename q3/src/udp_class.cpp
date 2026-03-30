@@ -23,10 +23,9 @@ void UdpBroker::stopWorker()
 std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 {
     std::string str;
-    auto af = sa->ss_family;
-    void* ip = nullptr;
+    const void* ip = nullptr;
 
-    switch (af)
+    switch (sa->ss_family)
     {
         case AF_INET:
             str.resize(INET_ADDRSTRLEN);
@@ -42,7 +41,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
             break;
     };
 
-    inet_ntop(af, ip, str.data(), str.size());
+    inet_ntop(sa->ss_family, ip, str.data(), str.size());
 
     // Truncate string object to length of null-terminated contents
     str.resize(std::strlen(str.c_str()));
@@ -55,26 +54,22 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         const ip_ver_e ipVer, const std::chrono::seconds timeout)
 {
     // Struct brace initialisation to value defaults
-    struct addrinfo hints {};
+    struct addrinfo hints {
+        .ai_flags    = AI_PASSIVE,  // Autofill my IP socket (used for incoming connections)
+        .ai_family   = ipVer,       // Use any address family (IPv4 or IPv6 here)
+        .ai_socktype = SOCK_DGRAM,  // Only return datagram type sockets
+        .ai_protocol = IPPROTO_UDP, // Only return sockets for the UDP protocol
+    };
+
+    // NOTE: Instead of specifying IPv4/6, can spawn an IPv6 socket
+    // to listen for all incoming connections and receive
+    // IPv4 traffic in mapped address format (rejecting it if desired)
 
     // TODO combine with send() setup
         // move getaddrinfo and socket creation into a common area
-
-    // Alternatively, can spawn an IPv6 socket to listen for all
-    // incoming connections and receive IPv4 traffic in mapped address format
-    hints.ai_family   = ipVer;   // Use any address family (IPv4 or IPv6 here)
-    hints.ai_socktype = SOCK_DGRAM;  // Only return datagram type sockets
-    hints.ai_flags    = AI_PASSIVE;  // Autofill my IP socket (used for incoming connections)
-    hints.ai_protocol = IPPROTO_UDP; // Only return sockets for the UDP protocol
-
-    int socket_fd       = 0;
-    int gai_ret         = 0;
-    int bind_ret        = 0;
-    int sockopt_ret     = 0;
-    int listen_ret      = 0;
-    ssize_t bytes_recvd = -1;
-
-    timeval sock_timeout = { .tv_sec = timeout.count() };
+    timeval sock_timeout = {
+        .tv_sec = timeout.count()
+    };
 
     auto listener_info = AddressInfo(nullptr, port, &hints);
     if (!listener_info.valid())
@@ -84,7 +79,7 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
     // returns from getaddrinfo() in addrinfo struct
 
     errno = 0;
-    socket_fd = socket(listener_info->ai_family, listener_info->ai_socktype, listener_info->ai_protocol);
+    int socket_fd = socket(listener_info->ai_family, listener_info->ai_socktype, listener_info->ai_protocol);
     if (socket_fd == -1)
         perror("Reception socket creation");
 
@@ -93,17 +88,17 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
     // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
     errno = 0;
-    bind_ret = bind(socket_fd, listener_info->ai_addr, listener_info->ai_addrlen);
+    int bind_ret = bind(socket_fd, listener_info->ai_addr, listener_info->ai_addrlen);
     if (bind_ret == -1)
         perror("Reception socket bind");
 
     errno = 0;
-    sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
+    int sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
         perror("Reception socket options");
 
     errno = 0;
-    bytes_recvd = recvfrom(socket_fd, data, len, 0,
+    ssize_t bytes_recvd = recvfrom(socket_fd, data, len, 0,
             (struct sockaddr*)senderAddr, senderAddrLen);
     if (bytes_recvd <= 0)
         perror("Reception socket reception");
@@ -117,15 +112,11 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
         const void* data, const size_t len)
 {
     // Init struct to default values (brace --> value initialisation)
-    struct addrinfo hints {};
-
-    hints.ai_family   = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;
-
-    int socket_fd      = 0;
-    int gai_ret        = 0;
-    ssize_t bytes_sent = -1;
+    struct addrinfo hints {
+        .ai_family   = AF_UNSPEC,
+        .ai_socktype = SOCK_DGRAM,
+        .ai_protocol = IPPROTO_UDP,
+    };
 
     auto dst_info = AddressInfo(ip, port, &hints);
     if (!dst_info.valid())
@@ -135,7 +126,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     // returns from getaddrinfo() in addrinfo struct
 
     errno = 0;
-    socket_fd = socket(dst_info->ai_family, dst_info->ai_socktype, dst_info->ai_protocol);
+    int socket_fd = socket(dst_info->ai_family, dst_info->ai_socktype, dst_info->ai_protocol);
     if (socket_fd == -1)
         perror("Send socket creation");
 
@@ -144,7 +135,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     // Useful if you have multiple interfaces, each with their own IP
 
     errno = 0;
-    bytes_sent = sendto(socket_fd, data, len, 0,
+    ssize_t bytes_sent = sendto(socket_fd, data, len, 0,
             dst_info->ai_addr, dst_info->ai_addrlen);
     if (bytes_sent == -1)
         perror("Send socket sendto");
