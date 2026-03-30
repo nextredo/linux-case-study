@@ -35,13 +35,14 @@ namespace
 // Maximum size to use for packet reception calls
 constexpr size_t RX_DATA_LEN = 255;
 
+// TODO combine better
 // WARN: Will only work with std::chrono::duration types
 // NOTE: Could constrain this with C++20 concepts
 template<typename T>
-auto fmt_as_ms(T time)
+auto fmt_as_s(T time)
 {
     // NOTE: Use std::format in C++20 and above
-    return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
+    return std::to_string(duration<double>(time).count());
 };
 
 std::string printable(time_point<steady_clock> tp)
@@ -55,7 +56,7 @@ std::string printable(time_point<steady_clock> tp)
     return std::move(out).str();
 }
 
-void check_time_point_tolerance(time_point<steady_clock> expected, time_point<steady_clock> actual, milliseconds tol)
+void check_time_point_tolerance(time_point<steady_clock> expected, time_point<steady_clock> actual, microseconds tol)
 {
     auto min = expected - tol;
     auto max = expected + tol;
@@ -64,6 +65,7 @@ void check_time_point_tolerance(time_point<steady_clock> expected, time_point<st
     INFO("occurred at              ", printable(actual));
     INFO("expected no earlier than ", printable(min));
     INFO("expected no later than   ", printable(max));
+    INFO("tolerance is             ", fmt_as_s(tol));
     CHECK(actual < max);
     CHECK(actual > min);
 }
@@ -201,6 +203,8 @@ TEST_SUITE("UDP")
             SUBCASE("after_1s") delay = 1s;
             SUBCASE("after_2s") delay = 2s;
             SUBCASE("after_5s") delay = 5s;
+
+            // NOTE: Commented out as it takes a long time to run
             // SUBCASE("after_255s") delay = 255s;
 
             rx_fn = [dst_port, msg, dst_ip, ip_ver, delay]()
@@ -212,9 +216,8 @@ TEST_SUITE("UDP")
                     struct sockaddr_storage sender_info {};
                     socklen_t sender_info_len = sizeof(sender_info);
 
-                    // WARN: API states we must only be able to delay for an integer number of seconds
-                    seconds receive_for    = 1s;
-                    auto    expect_send_at = task_start + delay;
+                    microseconds receive_for    = duration_cast<microseconds>(delay) / 4;
+                    auto         expect_send_at = task_start + delay;
 
                     // Sleep until half the reception window before next expected send time
                     std::this_thread::sleep_until(expect_send_at - (receive_for / 2));
@@ -286,33 +289,28 @@ TEST_SUITE("UDP")
             // beginning periodic sending, waiting for the packet it sends
             // as it starts, then immediately stopping reception
 
-            // TODO allow rx timeout to microsecond precision
-                // then test intervals of 1s
-                // then calc receive_for as 0.5*interval
-
             SUBCASE("2_packets")
             {
                 interval_count = 2;
 
-                SUBCASE("short") interval = 2s;
-                SUBCASE("long")  interval = 5s;
+                SUBCASE("short") interval = 1s;
+                SUBCASE("long")  interval = 3s;
             }
 
             SUBCASE("4_packets")
             {
                 interval_count = 4;
 
-                SUBCASE("short") interval = 2s;
-                SUBCASE("long")  interval = 5s;
+                SUBCASE("short") interval = 1s;
+                SUBCASE("long")  interval = 3s;
             }
 
             rx_fn = [dst_port, msg, dst_ip, ip_ver, interval, interval_count]()
                 {
                     auto task_start = steady_clock::now();
 
-                    // WARN: API states we must only be able to delay for an integer number of seconds
-                    seconds receive_for = 1s;
-                    size_t pkt_counter = 0;
+                    microseconds receive_for = duration_cast<microseconds>(interval) / 4;
+                    size_t       pkt_counter = 0;
 
                     // NOTE: Expect first packet to be sent as soon as we begin periodic sends
                     for (int i = 0; i < interval_count; ++i)

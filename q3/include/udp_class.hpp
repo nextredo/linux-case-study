@@ -19,6 +19,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+// NOTE: Using declarations in header files is bad practice
+using namespace std::chrono;
 using namespace std::chrono_literals;
 
 
@@ -125,7 +127,7 @@ public:
     static ssize_t recv(const char* port, void* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
             const ip_ver_e ipVer = ip_ver_e::UNSPEC,
-            const std::chrono::seconds timeout = 3s);
+            const microseconds timeout = 3s);
 
     /// @brief Sends a UDP packet after a specified delay
     /// @param ip    Destination IP
@@ -135,7 +137,7 @@ public:
     /// @return @p true if send successfully queued. @p false if not.
     bool sendDelayed(const char* ip, const char* port,
         const void* data, const size_t len,
-        const std::chrono::seconds delay);
+        const seconds delay);
 
     /// @brief   Sends a UDP packet periodically, forever
     /// @details Sends the first packet instantly
@@ -146,7 +148,7 @@ public:
     /// @return @p true if send successfully queued. @p false if not.
     bool sendPeriodic(const char* ip, const char* port,
         const void* data, const size_t len,
-        const std::chrono::seconds interval);
+        const seconds interval);
 };
 
 

@@ -51,7 +51,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 
 ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
-        const ip_ver_e ipVer, const std::chrono::seconds timeout)
+        const ip_ver_e ipVer, const microseconds timeout)
 {
     // Struct brace initialisation to value defaults
     struct addrinfo hints {
@@ -90,22 +90,19 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
     if (bind_ret == -1)
         perror("Reception socket bind");
 
+    // Calculate bulk of delay as seconds
+    // and remainder as microseconds
+    seconds      s       = duration_cast<seconds>(timeout);
+    microseconds us_left = timeout - s;
     timeval sock_timeout = {
-        .tv_sec = timeout.count()
+        .tv_sec  = s.count(),
+        .tv_usec = us_left.count(),
     };
-
-    // TODO remove
-    // int sock_reuse = 1;
 
     errno = 0;
     int sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
         perror("Reception socket options");
-
-    // TODO remove
-    // sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &sock_reuse, sizeof(sock_reuse));
-    // if (sockopt_ret == -1)
-    //     perror("Reception socket options");
 
     errno = 0;
     ssize_t bytes_recvd = recvfrom(socket_fd, data, len, 0,
@@ -156,7 +153,7 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
 
 
 bool UdpBroker::sendDelayed(const char* ip, const char* port,
-        const void* data, const size_t len, std::chrono::seconds delay)
+        const void* data, const size_t len, seconds delay)
 {
     // NOTE: Stretch goal
     // Allow for any std::chrono::duration amount of delay
@@ -203,7 +200,7 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
 // TODO this shares VAST amounts of code with sendDelayed
 // TODO combine the two to de-duplicate
 bool UdpBroker::sendPeriodic(const char* ip, const char* port,
-        const void* data, const size_t len, std::chrono::seconds interval)
+        const void* data, const size_t len, seconds interval)
 {
     // Ensure number is constrained
     // Alternatively, std::clamp() can be used
