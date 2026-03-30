@@ -54,9 +54,8 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
         const ip_ver_e ipVer, const std::chrono::seconds timeout)
 {
-    // Init struct to default values (brace --> value initialisation)
+    // Struct brace initialisation to value defaults
     struct addrinfo hints {};
-    struct addrinfo* result = nullptr;
 
     // TODO combine with send() setup
         // move getaddrinfo and socket creation into a common area
@@ -77,43 +76,31 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
 
     timeval sock_timeout = { .tv_sec = timeout.count() };
 
-    gai_ret = getaddrinfo(nullptr, port, &hints, &result);
-    if (gai_ret < 0)
-    {
-        fprintf(stderr, "Reception: get addr info error: %s\n", gai_strerror(gai_ret));
-        goto cleanup;
-    }
+    auto listener_info = AddressInfo(nullptr, port, &hints);
+    if (!listener_info.valid())
+        fprintf(stderr, "addr info error: %s\n", listener_info.errStr());
 
     // WARN: Ignoring possibility of multiple address information
     // returns from getaddrinfo() in addrinfo struct
 
     errno = 0;
-    socket_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    socket_fd = socket(listener_info->ai_family, listener_info->ai_socktype, listener_info->ai_protocol);
     if (socket_fd == -1)
-    {
         perror("Reception socket creation");
-        goto cleanup;
-    }
 
     // TODO allow socket re-binding without errors
     // int yes=1;
     // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
     errno = 0;
-    bind_ret = bind(socket_fd, result->ai_addr, result->ai_addrlen);
+    bind_ret = bind(socket_fd, listener_info->ai_addr, listener_info->ai_addrlen);
     if (bind_ret == -1)
-    {
         perror("Reception socket bind");
-        goto cleanup;
-    }
 
     errno = 0;
     sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
     if (sockopt_ret == -1)
-    {
         perror("Reception socket options");
-        goto cleanup;
-    }
 
     errno = 0;
     bytes_recvd = recvfrom(socket_fd, data, len, 0,
@@ -122,11 +109,6 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         perror("Reception socket reception");
 
     close(socket_fd);
-
-cleanup:
-    // TODO wrap addrinfo in a class
-        // so it frees its memory on destruction
-    freeaddrinfo(result);
     return bytes_recvd;
 }
 
@@ -136,7 +118,6 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
-    struct addrinfo* server_info = nullptr;
 
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
@@ -146,23 +127,17 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     int gai_ret        = 0;
     ssize_t bytes_sent = -1;
 
-    gai_ret = getaddrinfo(ip, port, &hints, &server_info);
-    if (gai_ret != 0)
-    {
-        fprintf(stderr, "get addr info error: %s\n", gai_strerror(gai_ret));
-        goto cleanup;
-    }
+    auto dst_info = AddressInfo(ip, port, &hints);
+    if (!dst_info.valid())
+        fprintf(stderr, "addr info error: %s\n", dst_info.errStr());
 
     // WARN: Ignoring possibility of multiple address information
     // returns from getaddrinfo() in addrinfo struct
 
     errno = 0;
-    socket_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+    socket_fd = socket(dst_info->ai_family, dst_info->ai_socktype, dst_info->ai_protocol);
     if (socket_fd == -1)
-    {
         perror("Send socket creation");
-        goto cleanup;
-    }
 
     // NOTE: Stretch goal
     // Use `bind()` to allow sending from a specific IP
@@ -170,17 +145,11 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
 
     errno = 0;
     bytes_sent = sendto(socket_fd, data, len, 0,
-            server_info->ai_addr, server_info->ai_addrlen);
+            dst_info->ai_addr, dst_info->ai_addrlen);
     if (bytes_sent == -1)
         perror("Send socket sendto");
 
     close(socket_fd);
-
-cleanup:
-    // TODO wrap addrinfo in a class
-        // so it frees its memory on destruction
-    freeaddrinfo(server_info);
-    perror("Send errored");
     return bytes_sent;
 }
 

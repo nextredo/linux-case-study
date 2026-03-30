@@ -21,6 +21,35 @@
 
 using namespace std::chrono_literals;
 
+class AddressInfo
+{
+private:
+    struct addrinfo* _info   = nullptr;
+    int              _gaiRet = -1;
+
+public:
+    auto operator ->()
+    {
+        return _info;
+    }
+
+    [[nodiscard]] bool valid()  const { return (_gaiRet == 0); }
+    [[nodiscard]] auto errStr() const { return gai_strerror(_gaiRet); }
+
+    AddressInfo() = delete;
+
+    AddressInfo(const char* name, const char* service,
+            const struct addrinfo* request) :
+        _gaiRet(getaddrinfo(name, service, request, &_info))
+    {
+    }
+
+    ~AddressInfo()
+    {
+        freeaddrinfo(_info);
+    }
+};
+
 // TODO doxygen - here, source, unit tests
 
 /// @brief Basic send/receive class
