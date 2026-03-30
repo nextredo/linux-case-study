@@ -35,25 +35,24 @@ namespace
 // Maximum size to use for packet reception calls
 constexpr size_t RX_DATA_LEN = 255;
 
-// TODO combine better
 // WARN: Will only work with std::chrono::duration types
 // NOTE: Could constrain this with C++20 concepts
+// NOTE: However, if using C++20, use std::format() instead
 template<typename T>
-auto fmt_as_s(T time)
+auto dur_to_secs(T time)
 {
-    // NOTE: Use std::format in C++20 and above
-    return std::to_string(duration<double>(time).count());
+    std::ostringstream out;
+    out.precision(2);
+    out << std::fixed << duration<double>(time).count() << "s";
+    return std::move(out).str();
 };
 
 std::string printable(time_point<steady_clock> tp)
 {
-    std::ostringstream out;
-    out.precision(2);
-
-    auto sec_since_start = duration<double>(tp.time_since_epoch());
-
-    out << std::fixed << "T+" << sec_since_start.count() << "s";
-    return std::move(out).str();
+    std::string out;
+    out.append("T+");
+    out.append(dur_to_secs(tp.time_since_epoch()));
+    return std::move(out);
 }
 
 void check_time_point_tolerance(time_point<steady_clock> expected, time_point<steady_clock> actual, microseconds tol)
@@ -63,9 +62,9 @@ void check_time_point_tolerance(time_point<steady_clock> expected, time_point<st
 
     INFO("expected at              ", printable(expected));
     INFO("occurred at              ", printable(actual));
+    INFO("tolerance is             ", dur_to_secs(tol));
     INFO("expected no earlier than ", printable(min));
     INFO("expected no later than   ", printable(max));
-    INFO("tolerance is             ", fmt_as_s(tol));
     CHECK(actual < max);
     CHECK(actual > min);
 }
