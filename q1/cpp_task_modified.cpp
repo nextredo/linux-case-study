@@ -52,8 +52,12 @@ int main()
     // do not interfere with each others' execution state
     std::atomic<bool> my_running1 = true;
     std::atomic<bool> my_running2 = true;
+
     std::thread my_thread1;
     std::thread my_thread2;
+
+    // WARN: If these are accessed in multiple threads,
+    // while >1 thread unjoined, they should be made atomic
     int loop_counter1 = 0;
     int loop_counter2 = 0;
 
