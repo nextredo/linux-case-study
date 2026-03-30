@@ -28,6 +28,9 @@ using namespace std::chrono;
     // warn ports already in use
     // re-starting periodic send / delayed send during a current periodic / delayed send
 
+// TODO
+    // capture `ctrl+C` to exit gracefully
+
 namespace
 {
 
@@ -123,7 +126,6 @@ TEST_SUITE("UDP")
                 // Reception will not work if packet is fragmented
                 REQUIRE(std::strlen(msg) + 1 < RX_DATA_LEN);
 
-                // TODO std vector instead
                 uint8_t rx_data[RX_DATA_LEN] {};
                 struct sockaddr_storage sender_info {};
                 socklen_t sender_info_len = sizeof(sender_info);

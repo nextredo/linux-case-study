@@ -36,10 +36,14 @@ private:
     // TODO Implement support for multiple background workers
         // Vector of workers
         // Unit tests for operations involving multiple workers
-    std::atomic<bool>        _workerExecFlag = true;
-    std::mutex               _workerMutex;
-    std::condition_variable  _workerCondVar;
-    std::thread              _worker;
+    std::atomic<bool>       _workerExecFlag = true;
+    std::mutex              _workerMutex;
+    std::condition_variable _workerCondVar;
+    std::thread             _worker;
+
+    void stopWorker();
+
+    void allowWork() { _workerExecFlag = true; }
 
 public:
     enum ip_ver_e : int
@@ -50,12 +54,10 @@ public:
     };
 
     /// @brief Custom destructor
-    /// @note  Correctly ends worker threads
+    /// @note  Required for worker thread termination
     ~UdpBroker();
 
     static std::string decodeIp(struct sockaddr_storage* sa);
-
-    static bool encodeIp(const char* ip, struct sockaddr_storage* ipData);
 
     /// @brief Sends a UDP packet (immediately)
     /// @return Number of bytes sent. Can be less than the input number
@@ -75,6 +77,7 @@ public:
     /// @param[out] senderAddr    Info about the sender
     /// @param[out] senderAddrLen Length of the received sender info
     /// @param      ip_ver_e      Which IP protocol to listen on
+    /// @param      timeout       How long to wait to receive a packet
     /// @return Number of bytes received
     static ssize_t recv(const char* port, void* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,

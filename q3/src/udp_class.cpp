@@ -2,6 +2,12 @@
 
 UdpBroker::~UdpBroker()
 {
+    stopWorker();
+}
+
+
+void UdpBroker::stopWorker()
+{
     // Tell workers to stop working
     _workerExecFlag = false;
 
@@ -11,6 +17,7 @@ UdpBroker::~UdpBroker()
     if (_worker.joinable())
         _worker.join();
 }
+
 
 std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 {
@@ -41,11 +48,6 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
     return str;
 }
 
-// TODO allow socket re-binding without errors
-// int yes=1;
-// char yes='1'; // Solaris people use this
-// lose the pesky "Address already in use" error message
-// setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
 ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
@@ -74,10 +76,6 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
 
     timeval sock_timeout = { .tv_sec = timeout.count() };
 
-    // TODO
-    // int yes=1;
-    // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
-
     gai_ret = getaddrinfo(nullptr, port, &hints, &result);
     if (gai_ret < 0)
     {
@@ -95,6 +93,10 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         perror("Reception socket creation");
         goto cleanup;
     }
+
+    // TODO allow socket re-binding without errors
+    // int yes=1;
+    // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
     errno = 0;
     bind_ret = bind(socket_fd, result->ai_addr, result->ai_addrlen);
@@ -135,7 +137,6 @@ ssize_t UdpBroker::send(const char* ip, const char* port,
     struct addrinfo hints {};
     struct addrinfo* server_info = nullptr;
 
-    // TODO make this selectable on call
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
@@ -201,8 +202,8 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
-    // TODO check for joinable workers, get rid of those that have finished
-    // joinWorker();
+    stopWorker();
+    allowWork();
     _worker = std::thread{
         // TODO bake in cond var waiting into the worker thread class
         // TODO possibly replace with timed_mutex and try_lock_for
@@ -249,6 +250,8 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
             static_cast<const uint8_t*>(data),
             static_cast<const uint8_t*>(data) + len};
 
+    stopWorker();
+    allowWork();
     _worker = std::thread{
         // TODO bake in cond var waiting into the worker thread class
         // TODO possibly replace with timed_mutex and try_lock_for
