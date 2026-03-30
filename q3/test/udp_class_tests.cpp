@@ -14,21 +14,17 @@
 using namespace std::chrono_literals;
 using namespace std::chrono;
 
-
-// TODO instructions for pulling this repo
-    // ensure submodule is pulled too & updated for q3 to work
-
 // NOTE: Unit test limitations
-// - Not tested on something other than loopback
-// - Not tested with "well-known"/"system" port numbers (0 - 1024)
+    // Not tested on something other than loopback
+    // Not tested with "well-known"/"system" port numbers (0 - 1024)
 
-// TODO tests for
+// TODO future tests for:
     // multiple senders at once
     // warn on port usage under 1024 (superuser only)
     // warn ports already in use
     // re-starting periodic send / delayed send during a current periodic / delayed send
 
-// TODO other
+// TODO other:
     // capture `ctrl+C` to exit gracefully
     // remove timeouts to give rx thread a headstart
         // should combine nicely with moving socket creation into class instance construction itself
@@ -53,10 +49,9 @@ std::string printable(time_point<steady_clock> tp)
     std::ostringstream out;
     out.precision(2);
 
-    auto time_since_start = duration<double>(tp.time_since_epoch());
-    auto sec_since_start  = time_since_start.count();
+    auto sec_since_start = duration<double>(tp.time_since_epoch());
 
-    out << std::fixed << sec_since_start << "s";
+    out << std::fixed << "T+" << sec_since_start.count() << "s";
     return std::move(out).str();
 }
 
@@ -65,10 +60,10 @@ void check_time_point_tolerance(time_point<steady_clock> expected, time_point<st
     auto min = expected - tol;
     auto max = expected + tol;
 
-    INFO("expected at ",              printable(expected));
-    INFO("occurred at ",              printable(actual));
+    INFO("expected at              ", printable(expected));
+    INFO("occurred at              ", printable(actual));
     INFO("expected no earlier than ", printable(min));
-    INFO("expected no later than ",   printable(max));
+    INFO("expected no later than   ", printable(max));
     CHECK(actual < max);
     CHECK(actual > min);
 }
@@ -350,90 +345,6 @@ TEST_SUITE("UDP")
 
                     // Should have received 1 packet for each interval waited
                     CHECK(pkt_counter == interval_count);
-
-                    // TODO BETTER IDEA
-                    // Just sleep until 0.5s before we expect the pkt to be sent
-                    // Receive for 1s (so we stop receiving 0.5s after pkt should be received)
-                    // Then sleep again until we expect the next one
-
-
-
-
-                    // 1st timeout = interval + tolerance
-                        // wait until reception
-                        // wait for rest of interval
-                        // loop again
-                    // 2nd timeout = interval + tolerance
-                        // wait until reception
-                        // wait for rest of interval
-                        // loop again
-                    // 3rd timeout = interval + tolerance
-                        // wait until reception
-                        // wait for rest of interval
-                        // no loop
-
-                    // while (true)
-                    // {
-                    //     // Begin receiving
-                    //     // Wait until reception returns
-                    //         // either from a packet
-                    //         // or from timeout
-                    //     // Increment pkts received if necessary
-                    //     // Check packet data
-                    //     // Check packet was received within interval tolerancing
-                    //     // If reception returned EARLY (due to packet)
-                    //         // wait for rest of the non-toleranced interval
-                    //     // If reception returned LATE  (due to toleranced timeout)
-                    //         // shorten next reception to be lmao
-                    // }
-
-
-
-
-
-
-
-
-
-
-
-
-                    // Loop for the receiving timeout period
-                    // size_t pkt_counter = 0;
-                    // auto loop_start = steady_clock::now();
-                    // while (steady_clock::now() - loop_start < loop_timeout)
-                    // {
-                    //     // Calculate remaining time for packet reception
-                    //     auto elapsed = steady_clock::now() - loop_start;
-                    //     auto remaining = duration_cast<seconds>(loop_timeout - elapsed);
-                    //
-                    //     // Break if no time remains
-                    //     if (remaining <= 0s)
-                    //         break;
-                    //
-                    //     uint8_t rx_data[RX_DATA_LEN] {};
-                    //     struct sockaddr_storage sender_info {};
-                    //     socklen_t sender_info_len = sizeof(sender_info);
-                    //
-                    //     auto start = steady_clock::now();
-                    //     auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
-                    //             &sender_info, &sender_info_len, ip_ver, remaining);
-                    //     auto end = steady_clock::now();
-                    //
-                    //     if (bytes_recvd > 0)
-                    //         ++pkt_counter;
-                    //
-                    //     INFO("rx timeout ", fmt_as_ms(remaining), "ms");
-                    //
-                    //     // Cease checking if no bytes received
-                    //     REQUIRE(bytes_recvd == std::strlen(msg));
-                    //     CHECK((const char*)rx_data == msg);
-                    //
-                    //     // Perform time checks & logging
-                    //     // Ensure each packet received approximately on-time
-                    //     auto time_to_rx = end - start;
-                    //     check_tolerance(interval, time_to_rx);
-                    // }
                 };
         }
 

@@ -1,6 +1,12 @@
 # Linux Case Study
 Case study to assess my skills in C++ / Python
 
+## Getting This Code
+```bash
+# Important to recurse submodules
+git clone https://github.com/nextredo/linux-case-study.git --recurse-submodules
+```
+
 ## Timing
 - Email received
   - Wed, Mar 25, 11:28 (CET/UTC+1)
