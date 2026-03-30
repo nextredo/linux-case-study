@@ -21,24 +21,38 @@
 
 using namespace std::chrono_literals;
 
+
+/// @brief Address information class
+/// @note  Ensures @p addrinfo struct from POSIX is freed on destruction
 class AddressInfo
 {
 private:
-    struct addrinfo* _info   = nullptr;
-    int              _gaiRet = -1;
+    struct addrinfo* _info   = nullptr; ///< Handle to address information
+    int              _gaiRet = -1;      ///< Validity of address info
 
 public:
-    [[nodiscard]] auto operator ->()  { return _info; }
-    [[nodiscard]] bool valid()  const { return (_gaiRet == 0); }
+    /// @name Basic getters
+    /// @{
+    [[nodiscard]] bool valid() const  { return (_gaiRet == 0); }
     [[nodiscard]] auto errStr() const { return gai_strerror(_gaiRet); }
+    /// @}
 
+    /// @brief access to underlying information
+    [[nodiscard]] const auto* operator ->() { return _info; }
+
+    /// @brief Deleted default constructor
     AddressInfo() = delete;
 
+    /// @brief Address information constructor
+    /// @param name    Host to get info for
+    /// @param service Service to get info for
+    /// @param hints   Hints to use while getting info
     AddressInfo(const char* name, const char* service,
-            const struct addrinfo* request) :
-        _gaiRet(getaddrinfo(name, service, request, &_info))
+            const struct addrinfo* hints) :
+        _gaiRet(getaddrinfo(name, service, hints, &_info))
     { }
 
+    /// @brief Freeing destructor
     ~AddressInfo() { freeaddrinfo(_info); }
 };
 
@@ -56,16 +70,22 @@ private:
     // TODO Implement support for multiple background workers
         // Vector of workers
         // Unit tests for operations involving multiple workers
-    std::atomic<bool>       _workerExecFlag = true;
-    std::mutex              _workerMutex;
-    std::condition_variable _workerCondVar;
-    std::thread             _worker;
 
+    /// Signal to stop workers
+    std::atomic<bool> _workerExecFlag = true;
+    std::thread       _worker; ///< Used for background tasks
+
+    std::mutex              _workerMutex;   ///< Cond var access ctrl
+    std::condition_variable _workerCondVar; ///< Used for interruptible sleep
+
+    /// @brief Stops background work
     void stopWorker();
 
+    /// @brief Allows background work
     void allowWork() { _workerExecFlag = true; }
 
 public:
+    /// @brief Protocol types
     enum ip_ver_e : int
     {
         UNSPEC = AF_UNSPEC,
@@ -77,6 +97,9 @@ public:
     /// @note  Required for worker thread termination
     ~UdpBroker();
 
+    /// @brief Convert struct holding IP info to a string
+    /// @param  Socket address struct containing an IP
+    /// @return Human-readable string
     static std::string decodeIp(struct sockaddr_storage* sa);
 
     /// @brief Sends a UDP packet (immediately)
@@ -96,8 +119,8 @@ public:
     /// @param      len           Length of the data buffer, in bytes
     /// @param[out] senderAddr    Info about the sender
     /// @param[out] senderAddrLen Length of the received sender info
-    /// @param      ip_ver_e      Which IP protocol to listen on
-    /// @param      timeout       How long to wait to receive a packet
+    /// @param      ipVer         Which IP version to listen on
+    /// @param      timeout       How long to wait for a packet
     /// @return Number of bytes received
     static ssize_t recv(const char* port, void* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
@@ -105,11 +128,25 @@ public:
             const std::chrono::seconds timeout = 3s);
 
     /// @brief Sends a UDP packet after a specified delay
+    /// @param ip    Destination IP
+    /// @param port  Host port to listen on
+    /// @param data  Buffer of data to send
+    /// @param delay How long to wait to send a packet
+    /// @return @p true if send successfully queued. @p false if not.
     bool sendDelayed(const char* ip, const char* port,
         const void* data, const size_t len,
         const std::chrono::seconds delay);
 
-    /// @brief Sends a UDP packet periodically
+    // TODO change sendPeriodic to send immediately, then after delays
+        // then update doxygen to match
+
+    /// @brief   Sends a UDP packet periodically
+    /// @details Sends the packet after the first delay
+    /// @param ip       Destination IP
+    /// @param port     Host port to listen on
+    /// @param data     Buffer of data to send
+    /// @param interval How long to wait between pkt sends
+    /// @return @p true if send successfully queued. @p false if not.
     bool sendPeriodic(const char* ip, const char* port,
         const void* data, const size_t len,
         const std::chrono::seconds interval);

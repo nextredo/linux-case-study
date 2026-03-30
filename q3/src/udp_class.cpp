@@ -65,13 +65,10 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
     // to listen for all incoming connections and receive
     // IPv4 traffic in mapped address format (rejecting it if desired)
 
-    // TODO combine with send() setup
+    // TODO combine with socket setup in send()
         // move getaddrinfo and socket creation into a common area
         // each worker (depending on if it's tx worker or rx)
         // should have a socket
-    timeval sock_timeout = {
-        .tv_sec = timeout.count()
-    };
 
     auto listener_info = AddressInfo(nullptr, port, &hints);
     if (!listener_info.valid())
@@ -92,6 +89,10 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
     int bind_ret = bind(socket_fd, listener_info->ai_addr, listener_info->ai_addrlen);
     if (bind_ret == -1)
         perror("Reception socket bind");
+
+    timeval sock_timeout = {
+        .tv_sec = timeout.count()
+    };
 
     errno = 0;
     int sockopt_ret = setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout, sizeof(sock_timeout));
