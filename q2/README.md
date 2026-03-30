@@ -22,4 +22,6 @@
   - Matrix not square
 
 ## Running
-- Open [`notes.ipynb`](./notes.ipynb) in a compatible program, such as Visual Studio Code with the Jupyter extension installed
+- Open [`notes.ipynb`](./notes.ipynb) in a compatible program, examples of which are:
+  - Visual Studio Code with the Jupyter extension installed
+  - The GitHub page for that notebook file
