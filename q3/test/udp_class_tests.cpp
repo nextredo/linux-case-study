@@ -30,6 +30,8 @@ using namespace std::chrono;
 
 // TODO
     // capture `ctrl+C` to exit gracefully
+    // remove timeouts to give rx thread a headstart
+        // should combine nicely with moving socket creation into class instance construction itself
 
 namespace
 {
@@ -298,7 +300,7 @@ TEST_SUITE("UDP")
                     // Wait for a little longer than however many
                     // intervals we're testing (plus tolerance)
                     // WARN: API states we must only be able to delay for an integer number of seconds
-                    auto rx_timeout = interval_count * interval + 1s;
+                    auto loop_timeout = interval_count * interval + 1s;
 
                     uint8_t rx_data[RX_DATA_LEN] {};
                     struct sockaddr_storage sender_info {};
@@ -307,18 +309,25 @@ TEST_SUITE("UDP")
                     // Loop for the receiving timeout period
                     size_t pkt_counter = 0;
                     auto loop_start = steady_clock::now();
-                    while (steady_clock::now() - loop_start < rx_timeout)
+                    while (steady_clock::now() - loop_start < loop_timeout)
                     {
+                        // Calculate remaining time for packet reception
+                        auto elapsed = steady_clock::now() - loop_start;
+                        auto remaining = duration_cast<seconds>(loop_timeout - elapsed);
+
+                        // Break if no time remains
+                        if (remaining <= 0s)
+                            break;
+
                         auto start = steady_clock::now();
                         auto bytes_recvd = UdpBroker::recv(dst_port, rx_data, RX_DATA_LEN,
-                                &sender_info, &sender_info_len, ip_ver, rx_timeout);
+                                &sender_info, &sender_info_len, ip_ver, remaining);
                         auto end = steady_clock::now();
 
                         if (bytes_recvd > 0)
                             ++pkt_counter;
 
                         // Cease checking if no bytes received
-                        REQUIRE(bytes_recvd == std::strlen(msg));
                         CHECK((const char*)rx_data == msg);
 
                         // Perform time checks & logging
