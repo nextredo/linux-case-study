@@ -185,14 +185,14 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
                 std::unique_lock<std::mutex> lock(this->_workerMutex);
                 this->_workerCondVar.wait_for(lock, delay);
 
-                // If we're still allowed to execute
+                // If we're still allowed to execute, continue
                 // As cond var may have disturbed our slumber
                 // to stop & get joined
-                if (_workerExecFlag.load())
-                {
-                    UdpBroker::send(ip.data(), port.data(),
-                            data.data(), data.size());
-                }
+                if (!_workerExecFlag.load())
+                    return;
+
+                UdpBroker::send(ip.data(), port.data(),
+                        data.data(), data.size());
             }
         };
 
@@ -230,14 +230,11 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
                 // Continue while workers are alive
                 while (_workerExecFlag.load())
                 {
-                    this->_workerCondVar.wait_for(lock, interval);
+                    UdpBroker::send(ip.data(), port.data(),
+                            data.data(), data.size());
 
-                    // If we're still allowed to execute
-                    if (_workerExecFlag.load())
-                    {
-                        UdpBroker::send(ip.data(), port.data(),
-                                data.data(), data.size());
-                    }
+                    // Wait for wakeup
+                    this->_workerCondVar.wait_for(lock, interval);
                 }
             }
         };

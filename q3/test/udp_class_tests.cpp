@@ -282,20 +282,28 @@ TEST_SUITE("UDP")
         {
             expect_send_success = true;
 
-            SUBCASE("1_packet")
+            // NOTE: Not testing just 1 send, as this would be us
+            // beginning periodic sending, waiting for the packet it sends
+            // as it starts, then immediately stopping reception
+
+            // TODO allow rx timeout to microsecond precision
+                // then test intervals of 1s
+                // then calc receive_for as 0.5*interval
+
+            SUBCASE("2_packets")
             {
-                interval_count = 1;
+                interval_count = 2;
 
                 SUBCASE("short") interval = 2s;
-                SUBCASE("long")  interval = 3s;
+                SUBCASE("long")  interval = 5s;
             }
 
-            SUBCASE("3_packets")
+            SUBCASE("4_packets")
             {
-                interval_count = 3;
+                interval_count = 4;
 
                 SUBCASE("short") interval = 2s;
-                SUBCASE("long")  interval = 3s;
+                SUBCASE("long")  interval = 5s;
             }
 
             rx_fn = [dst_port, msg, dst_ip, ip_ver, interval, interval_count]()
@@ -306,9 +314,8 @@ TEST_SUITE("UDP")
                     seconds receive_for = 1s;
                     size_t pkt_counter = 0;
 
-                    // TODO change the comment below vv
-                    // NOTE: First send expected 1 interval after beginning the send function
-                    for (int i = 1; i <= interval_count; ++i)
+                    // NOTE: Expect first packet to be sent as soon as we begin periodic sends
+                    for (int i = 0; i < interval_count; ++i)
                     {
                         // Setup structures to receive
                         uint8_t rx_data[RX_DATA_LEN] {};

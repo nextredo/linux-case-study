@@ -137,11 +137,8 @@ public:
         const void* data, const size_t len,
         const std::chrono::seconds delay);
 
-    // TODO change sendPeriodic to send immediately, then after delays
-        // then update doxygen to match
-
-    /// @brief   Sends a UDP packet periodically
-    /// @details Sends the packet after the first delay
+    /// @brief   Sends a UDP packet periodically, forever
+    /// @details Sends the first packet instantly
     /// @param ip       Destination IP
     /// @param port     Host port to listen on
     /// @param data     Buffer of data to send
