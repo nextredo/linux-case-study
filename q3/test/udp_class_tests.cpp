@@ -1,3 +1,4 @@
+#include <ratio>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #define DOCTEST_CONFIG_TREAT_CHAR_STAR_AS_STRING
 #include "doctest.h"
@@ -47,16 +48,27 @@ auto fmt_as_ms(T time)
     return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
 };
 
+std::string printable(time_point<steady_clock> tp)
+{
+    std::ostringstream out;
+    out.precision(2);
+
+    auto time_since_start = duration<double>(tp.time_since_epoch());
+    auto sec_since_start  = time_since_start.count();
+
+    out << std::fixed << sec_since_start << "s";
+    return std::move(out).str();
+}
+
 void check_time_point_tolerance(time_point<steady_clock> expected, time_point<steady_clock> actual, milliseconds tol)
 {
     auto min = expected - tol;
     auto max = expected + tol;
 
-    // TODO fix printing
-    INFO("expected at ",     expected);
-    INFO("occurred at ",     actual);
-    INFO("no earlier than ", min);
-    INFO("no later than ",   max);
+    INFO("expected at ",              printable(expected));
+    INFO("occurred at ",              printable(actual));
+    INFO("expected no earlier than ", printable(min));
+    INFO("expected no later than ",   printable(max));
     CHECK(actual < max);
     CHECK(actual > min);
 }
