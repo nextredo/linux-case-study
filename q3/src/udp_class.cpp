@@ -67,6 +67,8 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
 
     // TODO combine with send() setup
         // move getaddrinfo and socket creation into a common area
+        // each worker (depending on if it's tx worker or rx)
+        // should have a socket
     timeval sock_timeout = {
         .tv_sec = timeout.count()
     };
@@ -84,8 +86,7 @@ ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         perror("Reception socket creation");
 
     // TODO allow socket re-binding without errors
-    // int yes=1;
-    // setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
+    // (use setsockopt and SO_REUSEADDR)
 
     errno = 0;
     int bind_ret = bind(socket_fd, listener_info->ai_addr, listener_info->ai_addrlen);
@@ -172,9 +173,6 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
         [this, delay, ip = std::move(ip_mt),
             port = std::move(port_mt), data = std::move(data_mt)]()
             {
-                // TODO this functionality would be much nicer as a class
-                // Wait using a condition variable, so when the
-                // main object is destroyed, we end the thread
                 std::unique_lock<std::mutex> lock(this->_workerMutex);
                 this->_workerCondVar.wait_for(lock, delay);
 
