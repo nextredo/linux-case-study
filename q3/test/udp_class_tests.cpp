@@ -35,11 +35,9 @@ namespace
 // Maximum size to use for packet reception calls
 constexpr size_t RX_DATA_LEN = 255;
 
-// WARN: Will only work with std::chrono::duration types
-// NOTE: Could constrain this with C++20 concepts
-// NOTE: However, if using C++20, use std::format() instead
-template<typename T>
-auto dur_to_secs(T time)
+// NOTE: If using C++20, use std::format() instead
+template<typename Rep, typename Per>
+auto dur_to_secs(duration<Rep, Per> time)
 {
     std::ostringstream out;
     out.precision(2);
