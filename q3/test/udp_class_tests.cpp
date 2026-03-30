@@ -41,7 +41,7 @@ constexpr size_t RX_DATA_LEN = 255;
 // WARN: Will only work with std::chrono::duration types
 // NOTE: Could constrain this with C++20 concepts
 template<typename T>
-auto fmt_as_s(T time)
+auto fmt_as_ms(T time)
 {
     // NOTE: Use std::format in C++20 and above
     return duration<double, std::milli>(duration_cast<microseconds>(time)).count();
@@ -59,9 +59,9 @@ void check_tolerance(seconds expected, T elapsed, int perc = 10)
     auto max = tol(expected, perc);
     auto min = tol(expected, -perc);
 
-    INFO("took ",        fmt_as_s(elapsed), " ms");
-    INFO("allowed max ", fmt_as_s(max), " ms");
-    INFO("allowed min ", fmt_as_s(min), " ms");
+    INFO("took ",        fmt_as_ms(elapsed), " ms");
+    INFO("allowed max ", fmt_as_ms(max), " ms");
+    INFO("allowed min ", fmt_as_ms(min), " ms");
     CHECK(elapsed < max);
     CHECK(elapsed > min);
 }
@@ -276,9 +276,10 @@ TEST_SUITE("UDP")
 
         SUBCASE("valid")
         {
+            expect_send_success = true;
+
             SUBCASE("1_packet")
             {
-                expect_send_success = true;
                 interval_count = 1;
 
                 SUBCASE("short") interval = 2s;
@@ -287,7 +288,6 @@ TEST_SUITE("UDP")
 
             SUBCASE("3_packets")
             {
-                expect_send_success = true;
                 interval_count = 3;
 
                 SUBCASE("short") interval = 2s;
@@ -326,7 +326,10 @@ TEST_SUITE("UDP")
                         if (bytes_recvd > 0)
                             ++pkt_counter;
 
+                        INFO("waited ", fmt_as_ms(remaining), "ms");
+
                         // Cease checking if no bytes received
+                        REQUIRE(bytes_recvd == std::strlen(msg));
                         CHECK((const char*)rx_data == msg);
 
                         // Perform time checks & logging
