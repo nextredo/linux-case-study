@@ -1,10 +1,14 @@
+// Include guard
+// Alternatively, use `#pragma once`
+#ifndef UDP_CLASS_H
+#define UDP_CLASS_H
+
 #include <cstddef>
 #include <cerrno>
 #include <cstring>
 
 #include <atomic>
 #include <condition_variable>
-#include <vector>
 #include <thread>
 #include <chrono>
 #include <string>
@@ -15,19 +19,14 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-// Include guard
-// Alternatively, use `#pragma once`
-#ifndef UDP_CLASS_H
-#define UDP_CLASS_H
-
 using namespace std::chrono_literals;
-
-// NOTE: Class limitations
-// - Doesn't handle packet fragmentation
-// - Doesn't allow multiple background workers at once
 
 // TODO doxygen - here, source, unit tests
 
+/// @brief Basic send/receive class
+/// @note Class limitations
+/// @n    Doesn't handle packet fragmentation
+/// @n    Doesn't allow multiple background workers at once
 class UdpBroker
 {
 private:
@@ -53,7 +52,7 @@ public:
         IPV6   = AF_INET6,
     };
 
-    /// @brief Custom destructor
+    /// @brief Destructor
     /// @note  Required for worker thread termination
     ~UdpBroker();
 
@@ -82,17 +81,17 @@ public:
     static ssize_t recv(const char* port, void* data, const size_t len,
             struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
             const ip_ver_e ipVer = ip_ver_e::UNSPEC,
-            std::chrono::seconds timeout = 3s);
+            const std::chrono::seconds timeout = 3s);
 
     /// @brief Sends a UDP packet after a specified delay
     bool sendDelayed(const char* ip, const char* port,
         const void* data, const size_t len,
-        std::chrono::seconds delay);
+        const std::chrono::seconds delay);
 
     /// @brief Sends a UDP packet periodically
     bool sendPeriodic(const char* ip, const char* port,
         const void* data, const size_t len,
-        std::chrono::seconds interval);
+        const std::chrono::seconds interval);
 };
 
 

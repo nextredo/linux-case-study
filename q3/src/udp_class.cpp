@@ -1,4 +1,5 @@
 #include "udp_class.hpp"
+#include <vector>
 
 UdpBroker::~UdpBroker()
 {
@@ -51,7 +52,7 @@ std::string UdpBroker::decodeIp(struct sockaddr_storage* sa)
 
 ssize_t UdpBroker::recv(const char* port, void* data, const size_t len,
         struct sockaddr_storage* senderAddr, socklen_t* senderAddrLen,
-        const ip_ver_e ipVer, std::chrono::seconds timeout)
+        const ip_ver_e ipVer, const std::chrono::seconds timeout)
 {
     // Init struct to default values (brace --> value initialisation)
     struct addrinfo hints {};
@@ -204,10 +205,8 @@ bool UdpBroker::sendDelayed(const char* ip, const char* port,
 
     stopWorker();
     allowWork();
-    _worker = std::thread{
-        // TODO bake in cond var waiting into the worker thread class
-        // TODO possibly replace with timed_mutex and try_lock_for
 
+    _worker = std::thread{
         // Capture by value for ownership
         // Important in multithreaded contexts
         [this, delay, ip = std::move(ip_mt),
@@ -252,10 +251,8 @@ bool UdpBroker::sendPeriodic(const char* ip, const char* port,
 
     stopWorker();
     allowWork();
-    _worker = std::thread{
-        // TODO bake in cond var waiting into the worker thread class
-        // TODO possibly replace with timed_mutex and try_lock_for
 
+    _worker = std::thread{
         // Capture by value for ownership
         // Important in multithreaded contexts
         [this, interval, ip = std::move(ip_mt),
