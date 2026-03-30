@@ -1,13 +1,12 @@
 # Question 1 - `cpp_task.cpp`
->Question 1:<br>
->Take a look at `cpp_task.cpp`<br>
->What is the code doing, are there any issues, and if so how to fix them?<br>
+> Take a look at `cpp_task.cpp`<br>
+> What is the code doing, are there any issues, and if so how to fix them?<br>
 
 ## Notes
 ### Files
-- Original question in `cpp_task.cpp`
+- Original question in [`cpp_task.cpp`](./cpp_task.cpp)
   - Marked as readonly to prevent accidental modification
-- Changed version in `cpp_task_modified.cpp`
+- Changed version in [`cpp_task_modified.cpp`](./cpp_task_modified.cpp)
 
 ```bash
 # See changes between the files with;
@@ -15,7 +14,6 @@ diff cpp_task.cpp cpp_task_modified.cpp
 ```
 
 ## Running
-
 ```bash
 # Compile & run the solution
 g++ --std=c++17 cpp_task_modified.cpp && ./a.out
@@ -44,9 +42,8 @@ g++ --std=c++17 cpp_task_modified.cpp && ./a.out
     - Then aborts
 
 ### Fixing it
-
 > [!NOTE]
-> Notes on issues found are written in the code<br>
+> Full notes are found in the code.<br>
 > See [`cpp_task_modified.cpp`](./cpp_task_modified.cpp)<br>
 
 - Minor cleanup for readability
